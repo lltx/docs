@@ -30,14 +30,28 @@
       "group": "零基础入门Java AI",
       "pages": [
         "introduction",
-        "docs/01",
-        "doc2/02"
+        "docs/01模型选择",
+        "docs/02LangChain4j介绍",
+        "docs/03Chat API",
+        "docs/04Chat 常用配置",
+        "docs/05Chat Stream",
+        "docs/06Chat 视觉理解",
+        "docs/07Chat 记忆",
+        "docs/08工具调用",
+        "docs/09JSON输出",
+        "docs/10动态JSON",
+        "docs/11提示词工程",
+        "docs/12向量化",
+        "docs/13向量文本分类",
+        "docs/14动态函数调用",
+        "docs/15RAG解析文档",
+        "docs/16EasyRag",
+        "docs/17RAG 重排",
+        "docs/18RAG WebSearch"
       ]
     }
   ],
   "footerSocials": {
-    "x": "https://x.com/mintlify",
-    "github": "https://github.com/mintlify",
-    "linkedin": "https://www.linkedin.com/company/mintsearch"
+    "github": "https://github.com/pig-mesh"
   }
 }
