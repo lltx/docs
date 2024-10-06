@@ -1,0 +1,141 @@
+---
+title: LangChain4j介绍
+---
+
+LangChain4j 是一个专为 Java 语言开发的框架，旨在简化 Java 应用程序与大语言模型（LLM）的集成。该框架的开发始于 2023 年初，受到 ChatGPT 的兴起启发，借鉴了 Python 和 JavaScript 的 LLM 库，并融合了创新思想，推出了适用于 Java 的 LLM 框架。
+
+### LangChain4j 的核心目标
+LangChain4j 的主要目标是通过提供统一的 API 和工具箱，简化 Java 应用程序与 LLM 的集成，帮助开发者无缝地利用多种语言模型和嵌入模型，而无需深入理解每个模型的 API 细节。LangChain4j 支持 15 个以上的大语言模型提供商和嵌入模型，并且通过 API 的统一抽象，开发者可以轻松切换不同的模型，而无需修改现有代码。
+
+![](https://cdn.nlark.com/yuque/0/2024/webp/283679/1728195505321-cc02f97f-f7dc-4c84-b902-0288bf5d47a1.webp)
+
+### LangChain4j 的优势与特性
+1. **统一 API**  
+LangChain4j 提供了统一的 API，目前支持 15+ LLM 提供商和 15+ 嵌入模型。开发者只需了解一个 API，便可以接入市面上多种大语言模型，避免了由于模型接口差异带来的复杂性。
+2. **强大的工具箱**  
+LangChain4j 的工具箱功能丰富，包含从低级的提示词模板、聊天记忆管理、输出解析，到高级的 AI 服务（如 RAG，即检索增强生成）等功能模块。这种设计大大减少了重复代码和开发者手动整合不同组件的工作量。
+3. **丰富的示例**  
+LangChain4j 提供了大量集成示例，包括与 Quarkus 和 Spring Boot 的集成，帮助开发者快速上手并应用到实际项目中。
+4. **与 Spring AI 的比较**  
+LangChain4j 和 Spring AI 的目标相似，都是为了简化 Java 应用与 LLM 的集成。尽管两者的框架结构和侧重点有所不同，但从功能上看，LangChain4j 的集成功能略强于 Spring AI。
+
+### LangChain4j 的功能和集成
+1. **多模型支持**
+    - 集成 15+ 个大语言模型提供商
+    - 集成 15+ 嵌入模型（向量存储）
+    - 集成 4 个图片生成模型
+    - 集成 2 个评分和重排序模型
+    - 支持动态函数调用（Function Calling）和代码执行引擎
+    - 支持 OpenAI 审核模型，用于检测输入输出中的有害信息
+2. **多种功能**
+    - 支持同步和流式聊天模式，输出支持多种格式（基本类型、自定义 POJO 等）
+    - 提示词模板、聊天记忆管理
+    - 函数调用功能（Tools，或称 Function Calling）
+    - 高级 AI 服务功能
+    - 支持检索增强生成（RAG）
+3. **数据处理与检索**
+    - 支持从多个来源（如文件系统、URL、GitHub、Azure Blob、Amazon S3 等）导入不同类型的文档
+    - 支持文档拆分、片段嵌入生成、嵌入存储到向量数据库
+    - 提供查询扩展与压缩、查询路由、向量存储检索、重排名等功能
+4. **文本分类与标记化工具**
+    - 支持文本分类
+    - 提供标记化工具和标记计数估算工具
+
+### 组件与模块化设计
+LangChain4j 采用模块化设计，组件分为多个层级，方便开发者根据需求灵活组合使用：
+
+1. **基础组件**
+    - 大语言模型（LLM）
+    - 提示词模板
+    - 输出格式解析
+    - 上下文记忆管理
+2. **RAG 组件**
+    - 文档加载
+    - 文档拆分
+    - 嵌入生成
+    - 向量存储
+3. **高级功能**
+    - Chains：将多个低级组件组合在一起，协调它们之间的交互
+    - AI Services：提供更高层次的抽象，简化复杂应用场景
+
+LangChain4j 的模块化设计包括以下主要模块：
+
++ **langchain4j-core**：定义核心抽象，如 `ChatLanguageModel` 和 `EmbeddingStore` 及其 API。
++ **langchain4j**：包含有用的工具组件，如 `ChatMemory`、`OutputParser` 以及高级功能 `AiServices`。
++ **langchain4j-integration**：提供与不同 LLM 提供商的集成，支持独立使用。
++ **langchain4j-spring-boot-starter**：与 Spring Boot 项目集成，开箱即用。
++ **langchain4j-quarkus：与quarkus项目集成，开箱即用。**
+
+### API 抽象层次
+LangChain4j 的 API 分为两个层次：
+
+1. **Low Level API**  
+开发者可以自由组合低级组件，如 `ChatLanguageModel`、`UserMessage`、`AiMessage`、`EmbeddingStore` 等，以满足不同的自定义需求。
+2. **High Level API**  
+提供更简洁的高级 API，隐藏了底层复杂性，开发者可以通过 `AiServices` 等组件轻松调用 LLM。
+
+### 入门示例：集成通义模型 
+本示例展示了如何通过低级 API 接入阿里百炼平台的通义模型 `qwen-turbo`。通过使用 LangChain4j 框架，开发者可以轻松调用该模型并集成到 Java 应用中。
+
+#### Maven 依赖配置
+首先，需要在项目中引入以下 Maven 依赖，用于集成 LangChain4j 与 DashScope：
+
+```xml
+<dependency>
+    <groupId>dev.langchain4j</groupId>
+    <artifactId>langchain4j-dashscope-spring-boot-starter</artifactId>
+    <version>${langchain4j.version}</version>
+</dependency>
+```
+
+#### YML 配置文件
+在项目的 `application.yml` 中设置所使用的通义模型 `qwen-turbo`，以下是示例配置：
+
+```yaml
+langchain4j:
+  dashscope:
+    chat-model:
+      model-name: qwen-turbo
+```
+
+#### 代码实现
+使用以下代码，快速启动一个基于 LangChain4j 和 Spring Boot 的 Java 应用，集成并调用阿里百炼平台的通义大语言模型。
+
+```java
+package com.pig4cloud.ai;
+
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 聊天控制器，用于处理与通义模型的交互请求。
+ * 作者: lengleng
+ */
+@RequestMapping("/ll/")
+@RestController
+public class ChatController {
+
+    private final ChatLanguageModel chatLanguageModel;
+
+    public ChatController(ChatLanguageModel chatLanguageModel) {
+        this.chatLanguageModel = chatLanguageModel;
+    }
+
+    /**
+     * 处理聊天请求，返回通义模型生成的回复。
+     *
+     * @param prompt 用户输入的提示词
+     * @return 模型生成的文本回复
+     */
+    @GetMapping("chat")
+    public String chat(String prompt) {
+        return chatLanguageModel.generate(prompt);
+    }
+}
+```
+
+### 总结
+通过引入上述依赖、配置和代码，你可以快速启动并集成阿里百炼平台的通义大语言模型 `qwen-turbo`。这种方式不仅便于开发者接入大型语言模型，也为项目的智能化提供了极大的便利和扩展性。
+
