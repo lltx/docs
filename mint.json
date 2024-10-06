@@ -25,12 +25,12 @@
     "name": "PIG AI",
     "url": "https://ai.pig4cloud.com"
   },
-  "tabs": [
-    {
-      "name": "API Reference",
-      "url": "api-reference"
-    }
-  ],
+  // "tabs": [
+  //   {
+  //     "name": "API Reference",
+  //     "url": "api-reference"
+  //   }
+  // ],
   "anchors": [
     {
       "name": "Documentation",
