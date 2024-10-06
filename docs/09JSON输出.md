@@ -1,0 +1,188 @@
+---
+title: langchain4j json 输出
+---
+
+
+在与大语言模型(LLM)交互时,我们常常需要将其输出转换为结构化的数据格式,以便进一步处理和使用。LangChain4j框架为我们提供了一种优雅的方式来实现这一目标。本文将深入探讨LangChain4j如何将LLM的返回结果格式化为各种数据类型,包括基本类型、集合、自定义POJO等。
+
+## LangChain4j支持的返回类型
+LangChain4j支持将LLM的输出转换为以下类型:
+
+1. 字符串 (String)
+2. 基本类型 (boolean, byte, short, int, long, float, double)
+3. 包装类型 (Boolean, Byte, Short, Integer, Long, Float, Double, BigDecimal)
+4. 时间类型 (Date, LocalDate, LocalTime, LocalDateTime)
+5. 集合类型 (List, Set)
+6. 枚举类型 (Enum)
+7. 自定义POJO
+8. 自定义Result
+9. AI消息类型 (AiMessage)
+
+## 结构化输出示例
+让我们通过一些具体的例子来看看如何使用LangChain4j处理不同类型的输出。
+
+### 布尔值与枚举
+```java
+package com.pig4cloud.ai.sentiment;
+
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.spring.AiService;
+
+@AiService
+public interface SentimentAnalyzer {
+
+    @UserMessage("Does {{it}} have positive sentiment?")
+    boolean isPositive(String text);
+
+    @UserMessage("Analyze sentiment of {{it}}")
+    Sentiment analyzeSentimentOf(String text);
+
+    enum Sentiment {
+        POSITIVE, NEGATIVE, NEUTRAL
+    }
+}
+
+```
+
+在这个例子中,我们定义了一个`SentimentAnalyzer`接口,它使用LangChain4j的`@AiService`和`@UserMessage`注解来处理情感分析任务。该接口包含两个方法:
+
++ `isPositive`: 返回布尔值,表示文本是否具有积极情感。
++ `analyzeSentimentOf`: 返回枚举值,表示文本的情感倾向(积极、消极或中性)。
+
+### 数字类型
+对于数字类型的处理,LangChain4j同样提供了强大的支持:
+
+
+
+```java
+package com.pig4cloud.ai.number;
+
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.spring.AiService;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+@AiService
+public interface NumberExtractor {
+
+    @UserMessage("Extract a number from {{it}}")
+    int extractInt(String text);
+
+    @UserMessage("Extract a long number from {{it}}")
+    long extractLong(String text);
+
+    @UserMessage("Extract a big integer from {{it}}")
+    BigInteger extractBigInteger(String text);
+
+    @UserMessage("Extract a float number from {{it}}")
+    float extractFloat(String text);
+
+    @UserMessage("Extract a double number from {{it}}")
+    double extractDouble(String text);
+
+    @UserMessage("Extract a big decimal from {{it}}")
+    BigDecimal extractBigDecimal(String text);
+}
+
+```
+
+这个`NumberExtractor`接口展示了如何从文本中提取各种数值类型,包括整数、长整数、大整数、浮点数、双精度浮点数和大小数。
+
+### 自定义POJO
+LangChain4j还支持将LLM输出解析为自定义的POJO对象:
+
+
+
+```java
+package com.pig4cloud.ai.pojo;
+
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.spring.AiService;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+import java.time.LocalDate;
+
+@AiService
+public interface PojoExtractor {
+
+    @UserMessage("Extract information about a person from {{it}}")
+    Person extractPerson(String text);
+
+    @Getter
+    @Setter
+    @ToString
+    class Person {
+        private String firstName;
+        private String lastName;
+        private LocalDate birthDate;
+    }
+}
+
+```
+
+在这个例子中,我们定义了一个`Person`类作为自定义POJO,包含firstName、lastName和birthDate字段。`extractPerson`方法将从给定文本中提取人物信息并返回一个`Person`对象。
+
+## 深入理解LangChain4j的实现原理
+![](https://cdn.nlark.com/yuque/0/2024/png/283679/1728198141091-df745682-96fa-4f16-a1c8-dc339c95dbfe.png)
+
+LangChain4j的核心实现逻辑主要集中在`OutputParser`接口及其实现类中。让我们来看看关键的部分:
+
+### OutputParser接口
+```java
+package dev.langchain4j.model.output;
+
+public interface OutputParser<T> {
+
+    /**
+     * 将文本转换为T类型
+     * @param text 需要转换的文本
+     * @return 转换后的类型
+     * @author lengleng
+     */
+    T parse(String text);
+
+    /**
+     * 需要转换格式的描述
+     * @return 文本格式的描述
+     * @author lengleng
+     */
+    String formatInstructions();
+}
+
+```
+
+`OutputParser`接口定义了两个核心方法:
+
++ `parse`: 将文本转换为指定的类型T。
++ `formatInstructions`: 返回格式转换的说明。
+
+### ServiceOutputParser
+`ServiceOutputParser`是实际解析逻辑的核心实现类。它包含两个关键方法:
+
+1. `outputFormatInstructions`: 生成返回值格式的描述。
+2. `parse`: 解析LLM返回的文本,转换为指定的返回类型。
+
+这些方法的实现细节决定了LangChain4j如何处理不同类型的输出。
+
+## 执行流程
+LangChain4j处理结构化输出的大致流程如下:
+
+1. 通过`ServiceOutputParser.outputFormatInstructions`方法生成格式说明。
+2. 将格式说明与用户提示词一起发送给LLM。
+3. LLM根据格式说明生成相应格式的回复。
+4. 使用`ServiceOutputParser.parse`方法将LLM的回复解析为指定的返回类型。
+
+## 总结
+LangChain4j为处理大语言模型的结构化输出提供了一套优雅而强大的解决方案。通过简单的注解和接口定义,我们可以轻松地将LLM的文本输出转换为各种Java数据类型,包括基本类型、集合、自定义POJO等。
+
+要深入理解LangChain4j的实现原理,建议重点关注以下几个类的源码:
+
++ `DefaultAiServices`的`build`方法: 核心处理流程
++ `ServiceOutputParser`: 负责生成格式说明和解析LLM返回的文本
++ `OutputParser`接口及其实现类: 定义了具体的解析逻辑
+
+通过掌握这些核心组件,我们就能更好地利用LangChain4j来处理大语言模型的结构化输出,为我们的AI应用开发带来更多可能性。
+

@@ -1,0 +1,261 @@
+---
+title: langchain4j 记忆缓存
+---
+
+### 为什么需要ChatMemory？
+聊天记忆的实现相对简单。我们只需将用户的提问和大模型的回答存储在一个`List<ChatMessage>`中，并随着用户的提问将该列表一并发送给大模型。虽然实现简单，但实际应用中可能会面临一些问题：
+
+1. 随着提问的增加，上下文会变得非常长，可能迅速超出大模型的上下文token限制。
+2. 如果多个用户同时使用大模型，如何隔离不同用户的上下文信息。
+3. 手动维护和管理`ChatMessage`比较繁琐。因此，LangChain4j提供了一个ChatMemory抽象类以及多个开箱即用的实现，ChatMemory既可以作为独立的低级组件，也可以作为高级组件（如AI Services）的一部分。
+
+需要注意的是，LangChain4j目前只提供内存实现，并未提供持久化方式，如有特殊需求，需要自行实现。
+
+### ChatMemory具备的能力
++ **容器管理机制**：充当`ChatMessage`的容器，管理其生命周期。
++ **淘汰机制（Eviction policy）**：防止存储过多`ChatMessage`。
++ **持久化机制（Persistence）**：避免聊天上下文丢失。
++ **消息特殊处理机制**：对特定消息类型进行特殊处理，如`SystemMessage`和函数调用返回消息。
+
+#### 淘汰机制（Eviction policy）
+数据淘汰机制是必要的，原因包括：
+
++ **适应LLM的上下文窗口**：一次LLM可处理的token数量是有限的。
++ **控制成本**：每个token都有成本，逐出不必要的token可以降低费用。
++ **控制延迟**：发送给LLM的token越多，处理所需的时间就越长。
+
+### ChatMemory源码分析
+#### ChatMemory接口
+```java
+public interface ChatMemory {
+    // ChatMemory的ID
+    Object id();
+
+    // 将message添加到ChatMemory中
+    void add(ChatMessage message);
+
+    // 从ChatMemory中获取消息，具体取法取决于实现
+    List<ChatMessage> messages();
+
+    // 清空ChatMemory中的消息
+    void clear();
+}
+```
+
+#### ChatMemory实现类
++ **MessageWindowChatMemory（简单实现）**：采用滑动窗口，保留N条最新消息，淘汰旧消息。
++ **TokenWindowChatMemory（复杂实现）**：同样采用滑动窗口，但侧重于保留最新的tokens，需结合Tokenizer计算`ChatMessage`的token数量。
+
+### 持久化机制（Persistence）
+默认情况下，ChatMemory的实现将`ChatMessage`存储在内存中，如需持久化，可以实现自定义的`ChatMemoryStore`，将`ChatMessage`存储到任何选择的持久化存储中，并可自定义持久化策略。
+
+#### ChatMemoryStore接口
+```java
+public interface ChatMemoryStore {
+    // 根据memoryId从指定的ChatMemoryStore中获取消息
+    List<ChatMessage> getMessages(Object memoryId);
+
+    // 根据memoryId更新存储的消息
+    void updateMessages(Object memoryId, List<ChatMessage> messages);
+
+    // 根据memoryId删除存储的消息
+    void deleteMessages(Object memoryId);
+}
+```
+
+#### InMemoryChatMemoryStore实现类
+```java
+public class InMemoryChatMemoryStore implements ChatMemoryStore {
+    private final Map<Object, List<ChatMessage>> messagesByMemoryId = new ConcurrentHashMap<>();
+
+    public InMemoryChatMemoryStore() {}
+
+    @Override
+    public List<ChatMessage> getMessages(Object memoryId) {
+        return messagesByMemoryId.computeIfAbsent(memoryId, ignored -> new ArrayList<>());
+    }
+
+    @Override
+    public void updateMessages(Object memoryId, List<ChatMessage> messages) {
+        messagesByMemoryId.put(memoryId, messages);
+    }
+
+    @Override
+    public void deleteMessages(Object memoryId) {
+        messagesByMemoryId.remove(memoryId);
+    }
+}
+```
+
+LangChain4j仅提供基于内存的实现，如有特殊需求，我们可以自定义实现`ChatMemoryStore`接口，添加自定义逻辑。
+
+### SystemMessage特殊处理
+`SystemMessage`是一种特殊类型的消息，其处理方式与其他消息不同：
+
++ 一旦添加，`SystemMessage`将始终保留。
++ 只允许持有一个`SystemMessage`。
++ 忽略添加具有相同内容的新`SystemMessage`。
++ 如果添加具有不同内容的新`SystemMessage`，则替换前一个内容。
+
+### 工具消息的特殊处理
+工具消息包括函数调用请求消息和执行结果消息。如果`ToolExecutionRequest`的`AiMessage`被淘汰，与其关联的返回消息`ToolExecutionResultMessage`也需一并淘汰，以免影响大模型的生成效果。
+
+### ChatMemory代码实践
+#### 引入依赖包
+```xml
+<dependency>
+    <groupId>dev.langchain4j</groupId>
+    <artifactId>langchain4j-spring-boot-starter</artifactId>
+    <version>${langchain4j.version}</version>
+</dependency>
+
+<dependency>
+    <groupId>dev.langchain4j</groupId>
+    <artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
+    <version>${langchain4j.version}</version>
+</dependency>
+
+```
+
+#### 共享ChatMemory实现
+```java
+package com.pig4cloud.ai.chatmemory;
+
+import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.service.AiServices;
+import com.pig4cloud.ai.chatmemory.service.Assistant;
+
+public class ChatMemoryJavaExample {
+    public static void main(String[] args) {
+        ChatMemory chatMemory = MessageWindowChatMemory.withMaxMessages(10);
+        Assistant assistant = AiServices.builder(Assistant.class)
+                .chatLanguageModel(OpenAiChatModel.builder()
+                        .baseUrl("xxxx")
+                        .apiKey("xxxx")
+                        .build())
+                .chatMemory(chatMemory)
+                .build();
+
+        String answer = assistant.chat("Hello! My name is Klaus.");
+        System.out.println(answer); // Hello Klaus! How can I assist you today?
+
+        String answerWithName = assistant.chat("What is my name?");
+        System.out.println(answerWithName); // Your name is Klaus.
+    }
+}
+```
+
+### 执行测试结果：
+```plain
+Hello Klaus! How can I assist you today?
+Your name is Klaus.
+```
+
+#### 独享ChatMemory实现
+```java
+package com.pig4cloud.ai.chatmemory;
+
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.service.AiServices;
+import com.pig4cloud.ai.chatmemory.service.EachUserAssistant;
+
+public class ChatMemoryEachUserExample {
+    public static void main(String[] args) {
+        EachUserAssistant assistant = AiServices.builder(EachUserAssistant.class)
+                .chatLanguageModel(
+                        OpenAiChatModel.builder()
+                                .baseUrl("xxx")
+                                .apiKey("xxx")
+                                .build())
+                .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(10))
+                .build();
+
+        System.out.println(assistant.chat(1, "Hello, my name is Klaus"));
+        // Hi Klaus! How can I assist you today?
+
+        System.out.println(assistant.chat(2, "Hello, my name is Francine"));
+        // Hello Francine! How can I assist you today?
+
+        System.out.println(assistant.chat(1, "What is my name?"));
+        // Your name is Klaus.
+
+        System.out.println(assistant.chat(2, "What is my name?"));
+    }
+}
+```
+
+### 执行测试结果：
+```plain
+Hi Klaus! How can I assist you today?
+Hello Francine! How can I assist you today?
+Your name is Klaus.
+Your name is Francine.
+```
+
+通过定义`memoryId`，可以判断是否为同一组上下文信息。
+
+### 自定义MemoryStore
+```java
+package com.pig4cloud.ai.chatmemory.persistent;
+
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.store.memory.chat.ChatMemoryStore;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+
+import java.util.List;
+import java.util.Map;
+
+import static dev.langchain4j.data.message.ChatMessageDeserializer.messagesFromJson;
+import static dev.langchain4j.data.message.ChatMessageSerializer.messagesToJson;
+import static org.mapdb.Serializer.INTEGER;
+import static org.mapdb.Serializer.STRING;
+
+/**
+ * 自定义的持久化聊天存储器
+ */
+public class PersistentChatMemoryStore implements ChatMemoryStore {
+    private final DB db = DBMaker.fileDB("./chat-memory.db").transactionEnable().make();
+    private final Map<Integer, String> map = db.hashMap("messages", INTEGER, STRING).createOrOpen();
+
+    @Override
+
+
+    public List<ChatMessage> getMessages(Object memoryId) {
+        String json = map.get((int) memoryId);
+        return messagesFromJson(json);
+    }
+
+    @Override
+    public void updateMessages(Object memoryId, List<ChatMessage> messages) {
+        String json = messagesToJson(messages); // 序列化消息
+        map.put((int) memoryId, json);
+        db.commit(); // 提交事务
+    }
+
+    @Override
+    public void deleteMessages(Object memoryId) {
+        map.remove((int) memoryId);
+        db.commit();
+    }
+}
+```
+
+### 自定义的关键点：
++ 消息的序列化/反序列化可以使用LangChain4j提供的工具。
++ 存储方式可根据需求选择，如示例中使用的mapdb文件形式。
+
+### 执行流程
+1. 用户发起提问（prompt）。
+2. 根据`chatMemoryId`查询历史会话，并返回。
+3. 将prompt和历史消息组合成一个提示词，发送给大模型。
+4. 大模型根据提示词进行回答，并将prompt及`AiMessages`放入`ChatMemory`。
+5. 最后将大模型生成的结果返回给用户。
+
+![](https://cdn.nlark.com/yuque/0/2024/png/283679/1728197466035-0d6ff737-6164-408f-8ba6-3356b0ee9cd8.png)
+
+
+
