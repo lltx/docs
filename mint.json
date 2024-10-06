@@ -2,6 +2,8 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "零基础入门Java AI",
   "logo": {
+    "dark": "/logo/dark.svgX",
+    "light": "/logo/light.svgX"
   },
   "favicon": "/favicon.svg",
   "colors": {
