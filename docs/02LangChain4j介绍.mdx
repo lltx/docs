@@ -99,10 +99,11 @@ langchain4j:
 ```
 
 #### 代码实现
+
 使用以下代码，快速启动一个基于 LangChain4j 和 Spring Boot 的 Java 应用，集成并调用阿里百炼平台的通义大语言模型。
 
 ```java
-package com.pig4cloud.ai;
+package com.pig4cloud.ai.simple;
 
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -113,15 +114,13 @@ import org.springframework.web.bind.annotation.RestController;
  * 聊天控制器，用于处理与通义模型的交互请求。
  * 作者: lengleng
  */
-@RequestMapping("/ll/")
+@RequestMapping("/req")
 @RestController
 public class ChatController {
 
-    private final ChatLanguageModel chatLanguageModel;
+    @Autowired
+    private ChatLanguageModel chatLanguageModel;
 
-    public ChatController(ChatLanguageModel chatLanguageModel) {
-        this.chatLanguageModel = chatLanguageModel;
-    }
 
     /**
      * 处理聊天请求，返回通义模型生成的回复。
@@ -129,7 +128,7 @@ public class ChatController {
      * @param prompt 用户输入的提示词
      * @return 模型生成的文本回复
      */
-    @GetMapping("chat")
+    @GetMapping("/chat")
     public String chat(String prompt) {
         return chatLanguageModel.generate(prompt);
     }
