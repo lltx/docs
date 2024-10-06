@@ -27,11 +27,11 @@
   },
   "navigation": [
     {
-      "group": "Get Started",
+      "group": "零基础入门Java AI",
       "pages": [
         "introduction",
-        "quickstart",
-        "development"
+        "docs/01",
+        "doc2/02"
       ]
     }
   ],
