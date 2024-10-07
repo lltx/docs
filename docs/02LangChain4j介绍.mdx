@@ -2,77 +2,25 @@
 title: langchain4j 介绍
 ---
 
-LangChain4j 是一个专为 Java 语言开发的框架，旨在简化 Java 应用程序与大语言模型（LLM）的集成。该框架的开发始于 2023 年初，受到 ChatGPT 的兴起启发，借鉴了 Python 和 JavaScript 的 LLM 库，并融合了创新思想，推出了适用于 Java 的 LLM 框架。
+[LangChain4j](https://docs.langchain4j.dev/)  是一个专为Java开发者设计的开源库，旨在简化将大型语言模型（LLM）集成到Java应用程序中的过程。它于2023年初开发，灵感来源于Python和JavaScript的LLM库，特别是为了填补Java领域在这一方面的空白。
 
-### LangChain4j 的核心目标
-LangChain4j 的主要目标是通过提供统一的 API 和工具箱，简化 Java 应用程序与 LLM 的集成，帮助开发者无缝地利用多种语言模型和嵌入模型，而无需深入理解每个模型的 API 细节。LangChain4j 支持 15 个以上的大语言模型提供商和嵌入模型，并且通过 API 的统一抽象，开发者可以轻松切换不同的模型，而无需修改现有代码。
+### LangChain4j 的核心功能
+
+1. **统一API**：LangChain4j提供了一个标准化的API，使得开发者可以方便地接入15+个主流的LLM提供商（如OpenAI、Google 、阿里、 智谱）和15+个向量嵌入存储（Qdrant、Pinecone、Milvus）。这意味着开发者无需学习每个API的细节，可以轻松切换不同的模型和存储，而无需重写代码。
+
+2. **综合工具箱**：该框架包含多种工具，从低级的提示模板、聊天记忆管理到高级模式（如AI服务和RAG）。这些工具帮助开发者构建从聊天机器人到完整的数据检索管道等多种应用。
+
+3. **多模态支持**：LangChain4j支持文本和图像作为输入，能够处理更复杂的应用场景。
+
+## 优势
+
+- **模块化设计**：LangChain4j采用模块化结构，使得不同功能可以独立使用，便于扩展和维护。
+- **高层次抽象**：框架在两个抽象层次上运行，允许开发者根据需要选择低级或高级API进行开发，从而提高灵活性和可用性。
+- **良好的集成支持**：与Quarkus和Spring Boot等流行框架的集成，使得在现有Java项目中引入LLM变得更加简单。
+
 
 <img src='https://minio.pigx.top/oss/202410/1728219176.png' alt='1728219176'/>
 
-### LangChain4j 的优势与特性
-1. **统一 API**  
-LangChain4j 提供了统一的 API，目前支持 15+ LLM 提供商和 15+ 嵌入模型。开发者只需了解一个 API，便可以接入市面上多种大语言模型，避免了由于模型接口差异带来的复杂性。
-2. **强大的工具箱**  
-LangChain4j 的工具箱功能丰富，包含从低级的提示词模板、聊天记忆管理、输出解析，到高级的 AI 服务（如 RAG，即检索增强生成）等功能模块。这种设计大大减少了重复代码和开发者手动整合不同组件的工作量。
-3. **丰富的示例**  
-LangChain4j 提供了大量集成示例，包括与 Quarkus 和 Spring Boot 的集成，帮助开发者快速上手并应用到实际项目中。
-4. **与 Spring AI 的比较**  
-LangChain4j 和 Spring AI 的目标相似，都是为了简化 Java 应用与 LLM 的集成。尽管两者的框架结构和侧重点有所不同，但从功能上看，LangChain4j 的集成功能略强于 Spring AI。
-
-### LangChain4j 的功能和集成
-1. **多模型支持**
-    - 集成 15+ 个大语言模型提供商
-    - 集成 15+ 嵌入模型（向量存储）
-    - 集成 4 个图片生成模型
-    - 集成 2 个评分和重排序模型
-    - 支持动态函数调用（Function Calling）和代码执行引擎
-    - 支持 OpenAI 审核模型，用于检测输入输出中的有害信息
-2. **多种功能**
-    - 支持同步和流式聊天模式，输出支持多种格式（基本类型、自定义 POJO 等）
-    - 提示词模板、聊天记忆管理
-    - 函数调用功能（Tools，或称 Function Calling）
-    - 高级 AI 服务功能
-    - 支持检索增强生成（RAG）
-3. **数据处理与检索**
-    - 支持从多个来源（如文件系统、URL、GitHub、Azure Blob、Amazon S3 等）导入不同类型的文档
-    - 支持文档拆分、片段嵌入生成、嵌入存储到向量数据库
-    - 提供查询扩展与压缩、查询路由、向量存储检索、重排名等功能
-4. **文本分类与标记化工具**
-    - 支持文本分类
-    - 提供标记化工具和标记计数估算工具
-
-### 组件与模块化设计
-LangChain4j 采用模块化设计，组件分为多个层级，方便开发者根据需求灵活组合使用：
-
-1. **基础组件**
-    - 大语言模型（LLM）
-    - 提示词模板
-    - 输出格式解析
-    - 上下文记忆管理
-2. **RAG 组件**
-    - 文档加载
-    - 文档拆分
-    - 嵌入生成
-    - 向量存储
-3. **高级功能**
-    - Chains：将多个低级组件组合在一起，协调它们之间的交互
-    - AI Services：提供更高层次的抽象，简化复杂应用场景
-
-LangChain4j 的模块化设计包括以下主要模块：
-
-+ **langchain4j-core**：定义核心抽象，如 `ChatLanguageModel` 和 `EmbeddingStore` 及其 API。
-+ **langchain4j**：包含有用的工具组件，如 `ChatMemory`、`OutputParser` 以及高级功能 `AiServices`。
-+ **langchain4j-integration**：提供与不同 LLM 提供商的集成，支持独立使用。
-+ **langchain4j-spring-boot-starter**：与 Spring Boot 项目集成，开箱即用。
-+ **langchain4j-quarkus：与quarkus项目集成，开箱即用。**
-
-### API 抽象层次
-LangChain4j 的 API 分为两个层次：
-
-1. **Low Level API**  
-开发者可以自由组合低级组件，如 `ChatLanguageModel`、`UserMessage`、`AiMessage`、`EmbeddingStore` 等，以满足不同的自定义需求。
-2. **High Level API**  
-提供更简洁的高级 API，隐藏了底层复杂性，开发者可以通过 `AiServices` 等组件轻松调用 LLM。
 
 ### 入门示例：集成通义模型 
 本示例展示了如何通过低级 API 接入阿里百炼平台的通义模型 `qwen-turbo`。通过使用 LangChain4j 框架，开发者可以轻松调用该模型并集成到 Java 应用中。
@@ -84,8 +32,18 @@ LangChain4j 的 API 分为两个层次：
 <dependency>
     <groupId>dev.langchain4j</groupId>
     <artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
-    <version>0.35.0</version>
 </dependency>
+
+<!-- 加载bom 后，所有langchain4j引用不需要加版本号 -->
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-bom</artifactId>
+            <version>0.35.0</version>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
 ```
 
 #### YML 配置文件
@@ -97,8 +55,8 @@ LangChain4j 的 API 分为两个层次：
 langchain4j:
   open-ai:
     chat-model:
-      # 获取key: https://bailian.console.aliyun.com/?apiKey=1#/api-key
-      api-key: sk-4399d4a584ed4d51ab24e572bccbde55
+      # 课程测试 KEY，需要更换为实际可用 KEY	
+      api-key: sk-02e452c44fda4e1c9085825ab7da2b73
       model-name: qwen-turbo
       # 百炼兼容OpenAI接口规范，base_url为https://dashscope.aliyuncs.com/compatible-mode/v1
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
