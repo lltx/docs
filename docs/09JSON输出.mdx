@@ -8,15 +8,21 @@ title: langchain4j json 输出
 ## LangChain4j支持的返回类型
 LangChain4j支持将LLM的输出转换为以下类型:
 
-1. 字符串 (String)
-2. 基本类型 (boolean, byte, short, int, long, float, double)
-3. 包装类型 (Boolean, Byte, Short, Integer, Long, Float, Double, BigDecimal)
-4. 时间类型 (Date, LocalDate, LocalTime, LocalDateTime)
-5. 集合类型 (List, Set)
-6. 枚举类型 (Enum)
-7. 自定义POJO
-8. 自定义Result
-9. AI消息类型 (AiMessage)
+以下是LangChain4j支持的LLM输出类型的表格：
+
+| 序号 | 类型分类            | 支持的类型                                         |
+| ---- | ------------------- | ------------------------------------------------ |
+| 1    | 字符串 (String)      | String                                           |
+| 2    | 基本类型            | boolean, byte, short, int, long, float, double   |
+| 3    | 包装类型            | Boolean, Byte, Short, Integer, Long, Float, Double, BigDecimal |
+| 4    | 时间类型            | Date, LocalDate, LocalTime, LocalDateTime        |
+| 5    | 集合类型            | List, Set                                        |
+| 6    | 枚举类型            | Enum                                             |
+| 7    | 自定义POJO          | 自定义的Java类                                    |
+| 8    | 自定义Result        | 自定义的Result类型                                |
+| 9    | AI消息类型          | AiMessage                                        |
+
+这张表格展示了LangChain4j对不同类型的支持，涵盖了从基础数据类型到自定义复杂对象的多样化选择。
 
 ## 结构化输出示例
 让我们通过一些具体的例子来看看如何使用LangChain4j处理不同类型的输出。
