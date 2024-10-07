@@ -76,7 +76,7 @@ ChatLanguageModel model = OpenAiChatModel.builder()
 ### 3. 重试机制 (Retry Configuration)
 LangChain4j 支持重试配置，可用于处理失败的请求。
 
-可以通过 maxRetries 来配置重试逻辑，指定重试次数和延迟等参数：
+可以通过 `maxRetries` 来配置重试逻辑，指定重试次数和延迟等参数：
 
 ```java
 ChatLanguageModel model = OpenAiChatModel.builder()
@@ -86,7 +86,7 @@ ChatLanguageModel model = OpenAiChatModel.builder()
 ```
 
 ### 4. 超时配置 (Timeout Configuration)
-对于超时配置，可以通过 timeout 设置请求的超时时间：
+对于超时配置，可以通过 `timeout` 设置请求的超时时间：
 
 ```java
 ChatLanguageModel model = OpenAiChatModel.builder()
