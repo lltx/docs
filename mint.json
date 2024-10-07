@@ -37,7 +37,7 @@
         "docs/05Chat Stream",
         "docs/06Chat 视觉理解",
         "docs/07Chat 记忆",
-        "docs/08工具调用",
+        "docs/08函数调用",
         "docs/09JSON输出",
         "docs/10动态JSON",
         "docs/11提示词工程",
