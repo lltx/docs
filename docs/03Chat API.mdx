@@ -5,32 +5,33 @@ title: langchain4j chat api
 在这篇文章中，我们将深入了解LangChain4j框架的高层API（AiServices），并展示如何将其与OpenAI集成，以实现简单的聊天功能。我们将讨论LangChain4j支持的各种大型语言模型（LLMs），并逐步展示如何通过示例代码实现。
 
 ## LangChain4j支持的LLMs
-| Provider | Streaming | Tools | JSON mode | Supported Modalities (Input) | Observability | Local | Native | Comments |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Amazon Bedrock | ✅ | ✅ |  | text |  |  |  |  |
-| Anthropic | ✅ | ✅ |  | text, image |  |  | ✅ |  |
-| Azure OpenAI | ✅ | ✅ | ✅ | text, image | ✅ |  |  |  |
-| ChatGLM |  |  |  | text |  |  |  |  |
-| DashScope | ✅ | ✅ |  | text, image, audio | ✅ |  |  |  |
-| GitHub Models | ✅ | ✅ | ✅ | text | ✅ |  |  |  |
-| Google AI Gemini |  | ✅ | ✅ | text, image, audio, video, PDF | ✅ |  |  |  |
-| Google Vertex AI Gemini | ✅ | ✅ | ✅ | text, image, audio, video, PDF | ✅ |  |  |  |
-| Google Vertex AI PaLM 2 |  |  |  | text |  |  | ✅ |  |
-| Hugging Face |  |  |  | text |  |  |  |  |
-| Jlama | ✅ | ✅ |  | text |  | ✅ | ✅ |  |
-| LocalAI | ✅ | ✅ |  | text |  | ✅ |  |  |
-| Mistral AI | ✅ | ✅ | ✅ | text |  |  |  |  |
-| Ollama | ✅ | ✅ | ✅ | text, image | ✅ | ✅ |  | Compatible with: Ollama, LM Studio, GPT4All, etc. |
-| OpenAI | ✅ | ✅ | ✅ | text, image | ✅ |  | ✅ | Compatible with: Groq, etc. |
-| Qianfan | ✅ | ✅ |  | text |  |  |  |  |
-| Cloudflare Workers AI |  |  |  | text |  |  |  |  |
-| Zhipu AI | ✅ | ✅ |  | text, image | ✅ |  |  |  |
 
+| 供应商 | 流式调用 | 函数 | JSON  | 多模态 | 观测 |
+| --- | --- | --- | --- | --- | --- |
+| Amazon Bedrock | ✅ | ✅ |  | text |  |
+| Anthropic | ✅ | ✅ |  | text, image |  |
+| Azure OpenAI | ✅ | ✅ | ✅ | text, image | ✅ |
+| ChatGLM |  |  |  | text |  |
+| DashScope | ✅ | ✅ |  | text, image, audio | ✅ |
+| GitHub Models | ✅ | ✅ | ✅ | text | ✅ |
+| Google AI Gemini |  | ✅ | ✅ | text, image, audio, video, PDF | ✅ |
+| Google Vertex AI Gemini | ✅ | ✅ | ✅ | text, image, audio, video, PDF | ✅ |
+| Google Vertex AI PaLM 2 |  |  |  | text |  |
+| Hugging Face |  |  |  | text |  |
+| Jlama | ✅ | ✅ |  | text |  |
+| LocalAI | ✅ | ✅ |  | text |  |
+| Mistral AI | ✅ | ✅ | ✅ | text |  |
+| Ollama | ✅ | ✅ | ✅ | text, image | ✅ |
+| OpenAI | ✅ | ✅ | ✅ | text, image | ✅ |
+| Qianfan | ✅ | ✅ |  | text |  |
+| Cloudflare Workers AI |  |  |  | text |  |
+| Zhipu AI | ✅ | ✅ |  | text, image | ✅ |
 
-请告知如果需要对表格进行进一步调整或修改！
 
 ## LangChain4j的LLM API概述
+
 ### 低级LLM API
+
 #### ChatLanguageModel接口
 使用`ChatLanguageModel`接口与大模型进行交互。以下是接口的主要方法：
 
@@ -48,6 +49,7 @@ public interface ChatLanguageModel {
 为了简化开发，LangChain4j提供了高层API，使开发者能够更专注于业务逻辑，而无需关注底层实现细节。高层API中，`@AiService`注解用于定义一个集成大模型的服务。
 
 #### @AiService注解参数
+
 + **wiringMode**：注入类型（AUTOMATIC或EXPLICIT）。
 + **chatModel**：指定使用的大模型。
 + **streamingChatModel**：支持流式响应的大模型。
@@ -55,6 +57,7 @@ public interface ChatLanguageModel {
 + **tools**：需要调用的函数集合。
 
 ## 使用高层API实战
+
 ### 1. 依赖包
 在`pom.xml`中添加以下依赖：
 
