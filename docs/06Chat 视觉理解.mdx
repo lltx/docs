@@ -40,7 +40,7 @@ public class VisualUnderstandingExample {
 
         // 构建用户消息，包含图片和文本提示
         UserMessage userMessage = UserMessage.from(
-                TextContent.from("读取图片中的 中间位置：【发票号码】，底部位置：【金额】"),  // 用户输入的文本内容
+                TextContent.from("这是一张关于什么的图片"),  // 用户输入的文本内容
                 ImageContent.from(imageBase64, MediaType.IMAGE_JPEG_VALUE)  // 图片内容
         );
 
