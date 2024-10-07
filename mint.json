@@ -49,6 +49,13 @@
         "docs/17RAG 重排",
         "docs/18RAG WebSearch"
       ]
+    },
+    {
+      "group": "Cursor: 革新性的AI代码编辑器",
+      "pages": [
+        "cursor/1cursor",
+        "cursor/2cursor"
+      ]
     }
   ],
   "footerSocials": {
