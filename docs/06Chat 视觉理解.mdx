@@ -5,55 +5,57 @@ title: Chat 视觉理解
 以下是关于使用LangChain4j和Dashscope进行视觉理解的示例整理，包括上传图片并分析图片内容的基本流程。
 
 ### 示例代码：基于Dashscope的LangChain4j视觉理解
-这个示例展示了如何通过Dashscope的API，结合LangChain4j进行图像理解。使用的模型是`qwen-vl-max`，其支持视觉-语言的多模态任务。
+
+这个示例展示了如何通过Dashscope的API，结合LangChain4j进行图像理解。使用的模型是`qwen-vl-max`，其支持视觉-语言的多模态任务。 
+
+> 从非规则图片中读取指定日期的指数点数
+
+
+<img src='https://minio.pigx.top/oss/202410/1728291870.png' alt='1728291870'/>
+
+#### 构建大模型客户端
 
 ```java
-package com.pig4cloud.ai.example;
+@Bean
+public ChatLanguageModel chatLanguageModel() {
+return OpenAiChatModel.builder()
+        .apiKey(System.getenv("DASHSCOPE_KEY"))
+        .modelName("qwen-vl-max")  // 设置使用的模型名称
+        .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
+        .build();
+}
+```
 
-import com.dashscope.openai.OpenAiChatModel;
-import com.dashscope.chat.ChatRequest;
-import com.dashscope.chat.ChatResponse;
-import com.dashscope.chat.content.ImageContent;
-import com.dashscope.chat.content.TextContent;
-import com.dashscope.chat.message.UserMessage;
-import com.dashscope.util.FileUtil;
-import java.util.Base64;
+
+####  构建 ImageContent
+
+```java
 
 /**
  * 作者: lengleng
  * 视觉理解示例 - 通过Dashscope进行图像分析
  */
-public class VisualUnderstandingExample {
+@SpringBootTest
+class LLMConfigTest {
+    @Autowired
+    private ChatLanguageModel chatLanguageModel;
 
-    public void dashscopeVisualUnderstanding() {
+    @Value("1.png")
+    private Resource resource;
 
-        // 初始化OpenAiChatModel，使用qwen-vl-max模型
-        OpenAiChatModel chatModel = OpenAiChatModel.builder()
-                .apiKey(System.getenv("DASHSCOPE_KEY"))  // 从环境变量中读取API Key
-                .modelName("qwen-vl-max")  // 设置使用的模型名称
-                .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")  // Dashscope的基础URL
-                .strictJsonSchema(true)  // 设置为严格JSON模式
-                .build();
+    @Test
+    void chatLanguageModel() throws IOException {
 
-        // 读取图片并进行Base64编码
-        String imageBase64 = Base64.getEncoder().encodeToString(FileUtil.readBytes("/Users/lengleng/Downloads/3.jpg"));
+        byte[] byteArray = resource.getContentAsByteArray();
+        String encodeToString = Base64.getEncoder().encodeToString(byteArray);
 
-        // 构建用户消息，包含图片和文本提示
         UserMessage userMessage = UserMessage.from(
-                TextContent.from("这是一张关于什么的图片"),  // 用户输入的文本内容
-                ImageContent.from(imageBase64, MediaType.IMAGE_JPEG_VALUE)  // 图片内容
+                TextContent.from("提取图片中 9月30号的上证指数点数")
+                ,
+                ImageContent.from(encodeToString, "image/png")
         );
-
-        // 创建聊天请求
-        ChatRequest chatRequest = ChatRequest.builder()
-                .messages(userMessage)
-                .build();
-
-        // 调用聊天模型，获取回复
-        ChatResponse response = chatModel.chat(chatRequest);
-
-        // 输出AI的文本回复
-        System.out.println(response.aiMessage().text());
+        Response<AiMessage> response = chatLanguageModel.generate(userMessage);
+        System.out.println(response.content().text());
     }
 }
 ```
