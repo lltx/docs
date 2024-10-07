@@ -17,8 +17,8 @@
   },
   "topbarLinks": [
     {
-      "name": "Support",
-      "url": "mailto:wangiegie@gmail.com"
+      "name": "源码",
+      "url": "https://github.com/pig-mesh/langchain4j-course"
     }
   ],
   "topbarCtaButton": {
@@ -52,6 +52,6 @@
     }
   ],
   "footerSocials": {
-    "github": "https://github.com/pig-mesh"
+    "github": "https://github.com/pig-mesh/langchain4j-course"
   }
 }
