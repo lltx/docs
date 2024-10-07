@@ -21,12 +21,15 @@ OpenAiChatModel.builder()
 确保在依赖项中包含 SLF4J 的日志后端，比如 Logback
 
 #### Spring Boot 环境
-在 Spring Boot 集成中，可以通过 `application.properties` 文件配置日志：
 
-```properties
-langchain4j.open-ai.chat-model.log-requests = true
-langchain4j.open-ai.chat-model.log-responses = true
-logging.level.com.pig4cloud.ai = DEBUG
+在 Spring Boot 集成中，可以通过 `application.properties` 文件配置日志级别：
+
+> **只有日志级别调整为debug级别，同时配置以上 langchain 日志输出开关才有效**
+
+```yaml
+logging:
+  level:
+    root: debug
 ```
 
 ### 2. 监控 (Observability)
@@ -67,8 +70,7 @@ ChatModelListener listener = new ChatModelListener() {
 };
 
 ChatLanguageModel model = OpenAiChatModel.builder()
-        .apiKey(System.getenv("OPENAI_API_KEY"))
-        .modelName(GPT_4_O_MINI)
+        ...
         .listeners(List.of(listener))  // 添加监听器
         .build();
 ```
@@ -80,7 +82,7 @@ LangChain4j 支持重试配置，可用于处理失败的请求。
 
 ```java
 ChatLanguageModel model = OpenAiChatModel.builder()
-    .apiKey(System.getenv("OPENAI_API_KEY"))
+    ...
     .maxRetries(5)  // 设置重试策略
     .build();
 ```
@@ -90,7 +92,7 @@ ChatLanguageModel model = OpenAiChatModel.builder()
 
 ```java
 ChatLanguageModel model = OpenAiChatModel.builder()
-    .apiKey(System.getenv("OPENAI_API_KEY"))
+    ...
     .timeout(Duration.ofSeconds(10)) // 设置10秒超时
     .build();
 ```
