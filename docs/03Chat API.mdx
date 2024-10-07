@@ -30,121 +30,105 @@ title: langchain4j chat api
 
 ## LangChain4j的LLM API概述
 
-### 低级LLM API
+### 核心：ChatLanguageModel 模型元信息提供
 
-#### ChatLanguageModel接口
-使用`ChatLanguageModel`接口与大模型进行交互。以下是接口的主要方法：
+#### 1. 依赖包
 
-```java
-public interface ChatLanguageModel {
-    default String generate(String userMessage) {
-        return generate(UserMessage.from(userMessage)).content().text();
-    }
-
-    Response<AiMessage> generate(List<ChatMessage> messages);
-}
-```
-
-### 高级LLM API
-为了简化开发，LangChain4j提供了高层API，使开发者能够更专注于业务逻辑，而无需关注底层实现细节。高层API中，`@AiService`注解用于定义一个集成大模型的服务。
-
-#### @AiService注解参数
-
-+ **wiringMode**：注入类型（AUTOMATIC或EXPLICIT）。
-+ **chatModel**：指定使用的大模型。
-+ **streamingChatModel**：支持流式响应的大模型。
-+ **chatMemory**：上下文记忆Bean。
-+ **tools**：需要调用的函数集合。
-
-## 使用高层API实战
-
-### 1. 依赖包
 在`pom.xml`中添加以下依赖：
 
 ```xml
 <dependency>
     <groupId>dev.langchain4j</groupId>
-    <artifactId>langchain4j-spring-boot-starter</artifactId>
-    <version>${langchain4j.version}</version>
+    <artifactId>langchain4j</artifactId>
 </dependency>
-
 <dependency>
     <groupId>dev.langchain4j</groupId>
-    <artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
-    <version>${langchain4j.version}</version>
+    <artifactId>langchain4j-open-ai</artifactId>
 </dependency>
-
 ```
 
-### 2. YML配置
-在`application.yml`中配置服务参数：
+#### 2. 配置  ChatLanguageModel 提供模型元信息
 
-```yaml
-server:
-  port: 8801
-spring:
-  application:
-    name: chat-high-level-service
-langchain4j:
-  open-ai:
-    chat-model:
-      base-url: xxx
-      api-key: xx
+
+```java
+@Bean
+public ChatLanguageModel chatLanguageModel() {
+    return OpenAiChatModel.builder()
+            .apiKey(System.getenv("DASHSCOPE_KEY"))
+            .modelName("qwen-turbo")
+            .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
+            .build();
+}
 ```
 
-### 3. 定义AI Service
-使用`@AiService`注解定义一个AI助手接口：
+
+### 低级LLM API 调用
+
+使用`ChatLanguageModel`接口与大模型进行交互。以下是接口的主要方法：
+
+```java
+public interface ChatLanguageModel {
+    String generate(String userMessage);
+    Response<AiMessage> generate(List<ChatMessage> messages);
+}
+```
+
+```java
+@SpringBootTest
+class SimplechatApplicationTest {
+
+    @Autowired
+    private ChatLanguageModel chatLanguageModel;
+
+    @Test
+    public void testChat(){
+        String generate = chatLanguageModel.generate("你好");
+        System.out.println(generate);
+    }
+}
+```
+
+### 高级LLM API
+
+为了简化开发，LangChain4j提供了高层API，使开发者能够更专注于业务逻辑，而无需关注底层实现细节。高层API中，`AiService` 用于定义一个集成大模型的服务。
+
+#### 1. 定义AI Service
 
 ```java
 package com.pig4cloud.ai.service;
 
-import dev.langchain4j.service.spring.AiService;
-import dev.langchain4j.service.spring.AiServiceWiringMode;
-
 /**
- * 通过 @AiService 注解声明一个 AI 助手接口，指定 chatModel 为 openAiChatModel。
- * 作者：lengleng
- */
-@AiService(
-        wiringMode = AiServiceWiringMode.EXPLICIT,
-        chatModel = "openAiChatModel",
-        tools = {"calculator"}
-)
-public interface Assistant {
+ *  AI 助手接口
+*/
+public interface ChatAssistant {
     String chat(String userMessage);
 }
 ```
 
-### 4. 定义控制器
-创建控制器，处理来自客户端的请求：
+-  声明成 Spring Bean， 注入模型
 
 ```java
-package com.pig4cloud.ai;
+@Bean
+public ChatAssistant chatAssistant() {
+    return AiServices.builder(ChatAssistant.class)
+            .chatLanguageModel(chatLanguageModel())
+            .build();
+}
+```
 
-import com.pig4cloud.ai.service.Assistant;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+#### 2. 测试
 
-/**
- * 聊天控制器
- * 作者：lengleng
- */
-@RequestMapping("/hl")
-@RestController
-public class HighLevelChatController {
-    private final Assistant assistant;
+```java
+@SpringBootTest
+class ChatAssistantTest {
+    @Autowired
+    private ChatAssistant chatAssistant;
 
-    public HighLevelChatController(Assistant assistant) {
-        this.assistant = assistant;
-    }
-
-    @GetMapping("/chat")
-    public String chat(
-            @RequestParam(value = "prompt", defaultValue = "What is the square root of the sum of the numbers of letters in the words 'hello' and 'world'?")
-            String prompt) {
-        return assistant.chat(prompt);
+    @Test
+    public void testChat() {
+        String message = "Hello";
+        String response = chatAssistant.chat(message);
+        System.out.println(response);
     }
 }
 ```
