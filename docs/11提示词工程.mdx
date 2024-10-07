@@ -49,16 +49,9 @@ System.out.println(prompt.text()); // 输出: 请解释中国法律中的'知识
 
 现在，让我们来实现这个专业的法律咨询助手。
 
-首先，定义 `LegalAdvisor` 接口：
+#### 1. 定义 `LegalAdvisor` 接口：
 
 ```java
-package com.legalai.service;
-
-import dev.langchain4j.service.SystemMessage;
-import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.V;
-import dev.langchain4j.service.spring.AiService;
-
 @AiService
 public interface LegalAdvisor {
     @SystemMessage("你是一位专业的中国法律顾问，只回答与中国法律相关的问题。对于其他领域的问题，请回复'抱歉，我只能回答中国法律相关的问题。'")
@@ -67,20 +60,13 @@ public interface LegalAdvisor {
 }
 ```
 
-然后，创建一个控制器来处理法律咨询请求：
+#### 2. 创建一个控制器来处理法律咨询请求：
 
 ```java
-package com.legalai.controller;
-
-import com.legalai.service.LegalAdvisor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 /**
  * 法律咨询控制器
  *
- * @author legalai
+ * @author lengleng
  */
 @RestController
 public class LegalAdvisorController {
