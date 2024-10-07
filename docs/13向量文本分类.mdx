@@ -2,28 +2,23 @@
 title: 文本向量化分类
 ---
 
+> 智慧HR: 基于LangChain4j文本向量的面试者性格特征匹配
 
-本文将展示如何通过LangChain4j框架结合OpenAI模型，构建一个情感分类器。我们将从概念入手，详细介绍如何在Java中实现这一功能。
+## 引言
 
-## 什么是文本分类
-文本分类是自然语言处理中的核心任务，它将文本分配到不同的类别中。应用广泛，如垃圾邮件过滤、新闻推荐、情感分析等。
+在现代人力资源管理中，快速准确地评估候选人的性格特征对于找到最佳人才至关重要。本文将展示如何利用LangChain4j框架结合大语言模型，构建一个智能的面试者性格特征匹配系统。我们将从概念入手，详细介绍如何在Java中实现这一功能。
 
-### 应用场景
-+ **垃圾邮件过滤**：检测和过滤垃圾邮件。
-+ **新闻推荐**：根据用户兴趣推荐相关新闻。
-+ **情感分析**：分析用户评论的情感倾向。
-+ **仇恨言论识别**：过滤论坛中的违规发言。
-+ **营销与广告**：根据用户反馈调整广告策略。
+## 什么是性格特征匹配
+
+性格特征匹配是HR领域的一项重要任务，它通过分析面试者的语言表达、行为模式等信息，将其与预定义的性格标签进行匹配。这有助于HR专业人士更好地评估候选人是否适合特定职位或团队文化。
 
 ## LangChain4j中的文本分类支持
-LangChain4j框架通过`TextClassifier`接口，结合嵌入模型，实现强大的文本分类功能。
+
+LangChain4j框架通过`TextClassifier`接口，结合嵌入模型，为我们提供了实现性格特征匹配的强大工具。
 
 ### TextClassifier接口
+
 ```java
-package com.pig4cloud.ai.classification;
-
-import java.util.List;
-
 public interface TextClassifier<E extends Enum<E>> {
 
     /**
@@ -57,14 +52,10 @@ public interface TextClassifier<E extends Enum<E>> {
 ```
 
 ### 基于嵌入模型的分类器实现
-`EmbeddingModelTextClassifier`通过嵌入模型对文本进行向量化，并利用余弦相似度计算文本与分类标签之间的匹配度。
+
+`EmbeddingModelTextClassifier`通过嵌入模型对文本进行向量化，并利用余弦相似度计算文本与性格标签之间的匹配度。
 
 ```java
-package com.pig4cloud.ai.classification;
-
-import java.util.List;
-import java.util.Map;
-
 public class EmbeddingModelTextClassifier<E extends Enum<E>> implements TextClassifier<E> {
 
     private final EmbeddingModel embeddingModel;
@@ -73,9 +64,37 @@ public class EmbeddingModelTextClassifier<E extends Enum<E>> implements TextClas
     private final double minScore;
     private final double meanToMaxScoreRatio;
 
+    public EmbeddingModelTextClassifier(EmbeddingModel embeddingModel,
+                                        Map<E, List<String>> examplesByLabel) {
+        this(embeddingModel, examplesByLabel, 3, 0.7, 0.5);
+    }
+
+    public EmbeddingModelTextClassifier(EmbeddingModel embeddingModel,
+                                        Map<E, List<String>> examplesByLabel,
+                                        int maxResults,
+                                        double minScore,
+                                        double meanToMaxScoreRatio) {
+        this.embeddingModel = embeddingModel;
+        this.exampleEmbeddingsByLabel = embedExamples(examplesByLabel);
+        this.maxResults = maxResults;
+        this.minScore = minScore;
+        this.meanToMaxScoreRatio = meanToMaxScoreRatio;
+    }
+
+    private Map<E, List<Embedding>> embedExamples(Map<E, List<String>> examplesByLabel) {
+        return examplesByLabel.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .map(example -> embeddingModel.embed(example).content())
+                                .collect(Collectors.toList())
+                ));
+    }
+
     @Override
     public List<E> classify(String text) {
-        Embedding textEmbedding = embeddingModel.embed(text).content();
+        Response<Embedding> response = embeddingModel.embed(text);
+        Embedding textEmbedding = response.content();
         List<LabelWithScore<E>> labelsWithScores = new ArrayList<>();
 
         exampleEmbeddingsByLabel.forEach((label, exampleEmbeddings) -> {
@@ -102,36 +121,39 @@ public class EmbeddingModelTextClassifier<E extends Enum<E>> implements TextClas
     private double aggregatedScore(double meanScore, double maxScore) {
         return (meanToMaxScoreRatio * meanScore) + ((1 - meanToMaxScoreRatio) * maxScore);
     }
+
+    private static class LabelWithScore<E> {
+        E label;
+        double score;
+
+        LabelWithScore(E label, double score) {
+            this.label = label;
+            this.score = score;
+        }
+    }
 }
 ```
 
-### 参数说明
-+ `maxResults`：返回的分类结果数量。
-+ `minScore`：过滤得分低于该值的结果。
-+ `meanToMaxScoreRatio`：用于调整最终得分时平均分与最大分的比例。
+## 实现性格特征匹配
 
-## 实现情感分析
 ### 依赖配置
-在项目的`pom.xml`中加入OpenAI相关依赖：
+
+在项目的`pom.xml`中加入必要的依赖：
 
 ```xml
 <dependency>
     <groupId>dev.langchain4j</groupId>
-
-    <artifactId>langchain4j-openai-spring-boot-starter</artifactId>
-
+    <artifactId>langchain4j</artifactId>
 </dependency>
 
 <dependency>
     <groupId>dev.langchain4j</groupId>
-
-    <artifactId>langchain4j</artifactId>
-
+    <artifactId>langchain4j-open-ai</artifactId>
 </dependency>
-
 ```
 
 ### 配置文件 `application.yml`
+
 配置OpenAI的嵌入模型：
 
 ```yaml
@@ -143,106 +165,153 @@ langchain4j:
 ```
 
 ### 枚举类定义
+
 ```java
-package com.pig4cloud.ai.classification.enums;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 @Getter
 @AllArgsConstructor
-public enum Sentiment {
-    POSITIVE, NEUTRAL, NEGATIVE
+public enum PersonalityTrait {
+    /**
+     * 外向型：喜欢社交，从与他人互动中获得能量
+     */
+    EXTROVERT,
+
+    /**
+     * 内向型：倾向于独处，需要安静时间来恢复能量
+     */
+    INTROVERT,
+
+    /**
+     * 分析型：擅长逻辑思考，喜欢解决复杂问题
+     */
+    ANALYTICAL,
+
+    /**
+     * 创意型：富有想象力，常有新颖的想法
+     */
+    CREATIVE,
+
+    /**
+     * 领导型：善于指导他人，乐于承担责任
+     */
+    LEADER,
+
+    /**
+     * 团队合作型：重视协作，善于在团队中工作
+     */
+    TEAM_PLAYER
 }
 ```
 
 ### 示例数据
-```java
-package com.pig4cloud.ai.classification.example;
 
-import com.pig4cloud.ai.classification.enums.Sentiment;
+以下是中文的示例数据，用于模拟性格特征的文本向量化匹配：
+
+```java
+package com.smarthr.personality.example;
+
+import com.smarthr.personality.enums.PersonalityTrait;
 
 import java.util.List;
 import java.util.Map;
 
-public class SentimentExamples {
-    public static final Map<Sentiment, List<String>> examples = Map.of(
-            Sentiment.POSITIVE, List.of("This is great!", "Wow, awesome!"),
-            Sentiment.NEUTRAL, List.of("Well, it's fine", "It's ok"),
-            Sentiment.NEGATIVE, List.of("It is pretty bad", "Worst experience ever!")
+public class PersonalityTraitExamples {
+    public static final Map<PersonalityTrait, List<String>> examples = Map.of(
+            PersonalityTrait.EXTROVERT, List.of(
+                    "我喜欢结识新朋友",
+                    "团体活动让我充满活力",
+                    "我经常是聚会的焦点",
+                    "我喜欢在热闹的社交环境中工作"
+            ),
+            PersonalityTrait.INTROVERT, List.of(
+                    "我更喜欢独自工作",
+                    "我需要安静的时间来充电",
+                    "大型社交聚会让我感到压抑",
+                    "我喜欢深入的一对一谈话"
+            ),
+            PersonalityTrait.ANALYTICAL, List.of(
+                    "我喜欢解决复杂的问题",
+                    "数据驱动的决策至关重要",
+                    "我总是寻找信息中的模式和联系",
+                    "我倾向于在采取行动之前彻底分析情况"
+            ),
+            PersonalityTrait.CREATIVE, List.of(
+                    "我常常跳出框架思考",
+                    "我总是想出新的点子",
+                    "我喜欢寻找创新的解决方案",
+                    "我受到周围艺术和美的启发"
+            ),
+            PersonalityTrait.LEADER, List.of(
+                    "我能自信地领导项目",
+                    "我激励他人实现目标",
+                    "我喜欢指导和培养团队成员",
+                    "我不怕做出艰难的决定"
+            ),
+            PersonalityTrait.TEAM_PLAYER, List.of(
+                    "合作是成功的关键",
+                    "我重视所有团队成员的意见",
+                    "我总是愿意帮助我的同事",
+                    "我相信团队中多样化视角的力量"
+            )
     );
 }
 ```
 
-### Service实现
+### Ai Service实现
+
 ```java
-package com.pig4cloud.ai.classification.service;
-
-import dev.langchain4j.classification.EmbeddingModelTextClassifier;
-import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import com.pig4cloud.ai.classification.enums.Sentiment;
-import com.pig4cloud.ai.classification.example.SentimentExamples;
-
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
-public class ClassifyService {
+public class PersonalityMatchingService {
 
     private final OpenAiEmbeddingModel openAiEmbeddingModel;
 
     /**
-     * 对文本进行情感分析
+     * 分析面试者的性格特征
      *
-     * @param text 文本
-     * @return 分类列表
+     * @param interviewText 面试文本
+     * @return 匹配的性格特征列表
      */
-    public List<Sentiment> classifySentiment(String text) {
-        EmbeddingModelTextClassifier<Sentiment> classifier =
-                new EmbeddingModelTextClassifier<>(openAiEmbeddingModel, SentimentExamples.examples);
-        return classifier.classify(text);
+    public List<PersonalityTrait> analyzePersonality(String interviewText) {
+        EmbeddingModelTextClassifier<PersonalityTrait> classifier =
+                new EmbeddingModelTextClassifier<>(openAiEmbeddingModel, PersonalityTraitExamples.examples);
+        return classifier.classify(interviewText);
     }
 }
 ```
 
 ### Controller实现
+
 ```java
-package com.pig4cloud.ai.classification.controller;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import com.pig4cloud.ai.classification.enums.Sentiment;
-import com.pig4cloud.ai.classification.service.ClassifyService;
-
-import java.util.List;
-
 @RestController
-@RequestMapping("/classify/")
+@RequestMapping("/api/hr")
 @RequiredArgsConstructor
-public class ClassificationController {
+public class PersonalityMatchingController {
 
-    private final ClassifyService classificationService;
+    private final PersonalityMatchingService personalityMatchingService;
 
-    @GetMapping("/sentiment")
-    public List<Sentiment> sentiment(String text) {
-        return classificationService.classifySentiment(text);
+    /**
+     * 分析面试文本并返回匹配的性格特征
+     *
+     * @param interviewText 面试文本
+     * @return 匹配的性格特征列表
+     */
+    @PostMapping("/analyze-personality")
+    public List<PersonalityTrait> analyzePersonality(@RequestBody String interviewText) {
+        return personalityMatchingService.analyzePersonality(interviewText);
     }
 }
 ```
 
 ### 测试
-通过HTTP请求测试情感分类功能：
+
+通过HTTP请求测试性格特征匹配功能:
 
 ```plain
-GET /classify/sentiment?text=Awesome! HTTP/1.1
+POST /api/hr/analyze-personality HTTP/1.1
 Host: localhost:8080
 Content-Type: application/json
+
+"我喜欢解决复杂问题并分析数据以找到创新的解决方案。虽然我能在团队中很好地工作，但我通常更喜欢独自花时间专注于任务。我总是寻找新的创意方法来应对工作中的挑战。"
 ```
 
-## 总结
-本文介绍了如何使用LangChain4j框架结合OpenAI的嵌入模型来实现文本分类，特别是情感分析任务。通过提供样例代码，演示了如何使用OpenAI的嵌入模型进行情感分类，并展示了如何将此解决方案扩展到其他文本分类任务中。
-
+这样可以有效测试性格特征匹配的准确性，帮助HR更好地评估面试者的性格类型和岗位适配度。
