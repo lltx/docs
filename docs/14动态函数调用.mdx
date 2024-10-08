@@ -2,17 +2,18 @@
 title: 动态函数调用
 ---
 
-### LangChain4j系列：LangChain4j 接入OpenAI+Judge0 实现动态函数调用
+LangChain4j系列：LangChain4j 接入GraalVm
+ 实现动态函数调用
 
 #### 引言
-在现代软件开发中，代码执行引擎的应用场景越来越广泛。无论是在线编程竞赛、代码评审，还是教育平台的编程作业自动评分，代码执行引擎都扮演着至关重要的角色。LangChain4j框架通过集成多种代码执行引擎，为开发者提供了强大的工具支持。本文将详细介绍LangChain4j如何接入OpenAI和Judge0，实现动态函数调用，并探讨其在实际业务场景中的应用。
+
+在现代软件开发中，代码执行引擎的应用场景越来越广泛。LangChain4j框架通过集成多种代码执行引擎，为开发者提供了强大的工具支持。本文将详细介绍LangChain4j如何接入GraalVm，实现动态函数调用，并探讨其在实际业务场景中的应用。
 
 #### 代码执行引擎的使用场景
-1. **在线编程竞赛**：自动评测参赛者的代码，确保公平公正。
-2. **代码评审**：在代码提交过程中自动检查代码的正确性和性能。
-3. **教育平台**：用于在线课程中的编程作业自动评分，提高教学效率。
+
 
 #### LangChain4j框架支持的执行引擎
+
 LangChain4j目前支持两种主要的代码执行引擎：
 
 1. **GraalVM**：
@@ -22,168 +23,35 @@ LangChain4j目前支持两种主要的代码执行引擎：
     - 一个开源的代码执行引擎，支持多种编程语言，如C、C++、Java、Python、Ruby等。
     - 号称“世界上最先进的开源在线代码执行系统”。
 
-#### 类结构设计
-```java
-public interface CodeExecutionEngine {
-    String execute(String code);
-}
-
-public class GraalVmJavaScriptExecutionEngine implements CodeExecutionEngine {
-    @Override
-    public String execute(String code) {
-        // 具体实现
-    }
-}
-
-public class GraalVmPythonExecutionEngine implements CodeExecutionEngine {
-    @Override
-    public String execute(String code) {
-        // 具体实现
-    }
-}
-
-public class Judge0JavaScriptEngine implements CodeExecutionEngine {
-    private String apiKey;
-    private int languageId;
-    private OkHttpClient client;
-
-    @Override
-    public String execute(String code) {
-        // 具体实现
-    }
-}
-```
-
-#### 工具类封装
-LangChain4j封装了代码执行工具类，方便在函数调用中直接使用：
-
-```java
-public class GraalVmJavaScriptExecutionTool {
-    private GraalVmJavaScriptExecutionEngine engine;
-
-    public String executeJavaScriptCode(String code) {
-        return engine.execute(code);
-    }
-}
-
-public class GraalVmPythonExecutionTool {
-    private GraalVmPythonExecutionEngine engine;
-
-    public String executePythonCode(String code) {
-        return engine.execute(code);
-    }
-}
-
-public class Judge0JavaScriptExecutionTool {
-    private Judge0JavaScriptEngine engine;
-
-    public String executeJavaScriptCode(String code) {
-        return engine.execute(code);
-    }
-}
-```
-
 #### 使用示例
-以下是使用Judge0实现动态函数调用的示例代码：
 
 ##### 依赖配置
 ```xml
 <dependency>
-    <groupId>dev.langchain4j</groupId>
-
-    <artifactId>langchain4j-code-execution-engine-judge0</artifactId>
-
+<groupId>dev.langchain4j</groupId>
+<artifactId>langchain4j-code-execution-engine-graalvm-polyglot</artifactId>
 </dependency>
-
-<dependency>
-    <groupId>dev.langchain4j</groupId>
-
-    <artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
-
-</dependency>
-
-<dependency>
-    <groupId>dev.langchain4j</groupId>
-
-    <artifactId>langchain4j-spring-boot-starter</artifactId>
-
-</dependency>
-
-```
-
-##### 配置文件
-```yaml
-langchain4j:
-  open-ai:
-    chat-model:
-      base-url: xxx
-      api-key: xxx
 ```
 
 ##### 配置类
 ```java
-@Configuration
-public class Judge0Config {
-    @Bean
-    public Judge0JavaScriptExecutionTool judge0JavaScriptExecutionTool() {
-        return new Judge0JavaScriptExecutionTool(
-                "d71e45f899mshfc8bffd2eeaf2f1p1f7adajsnee2401c1b95a"
-        );
-    }
-}
+ChatAssistant assistant = AiServices.builder(ChatAssistant.class)
+        .chatLanguageModel(chatLanguageModel)
+        .tools(new GraalVmJavaScriptExecutionTool())
+        .build();
 ```
 
-##### 服务接口
+##### Ai Service 定义
+
 ```java
 public interface Assistant {
     String chat(String message);
 }
 ```
 
-##### 服务实现
+##### 测试
+
 ```java
-@Service
-@RequiredArgsConstructor
-public class Judge0ToolService {
-    private final OpenAiChatModel model;
-    private final Judge0JavaScriptExecutionTool judge0;
-
-    public String execute(String message) {
-        Assistant assistant = AiServices.builder(Assistant.class)
-                .chatLanguageModel(model)
-                .tools(judge0)
-                .build();
-        return assistant.chat(message);
-    }
-}
+String chat = chatAssistant.chat("What is the square root of 485906798473894056 in scientific notation?");
+System.out.println(chat);
 ```
-
-##### 控制器
-```java
-@RestController
-@RequiredArgsConstructor
-public class Judge0Controller {
-    private final Judge0ToolService judge0ToolService;
-
-    @GetMapping("/judge0/js")
-    public String tool(@RequestParam(value = "message",
-            defaultValue = "What is the square root of 485906798473894056 in scientific notation?") String message) {
-        return judge0ToolService.execute(message);
-    }
-}
-```
-
-#### 测试效果
-通过以下请求，可以测试Judge0工具的执行效果：
-
-```http
-GET localhost:8080/judge0/js?message=Capitalize every third letter: abcabc
-```
-
-```http
-GET localhost:8080/judge0/js?message=The Length of the string "Hello, World!"
-```
-
-#### 总结
-本文详细介绍了LangChain4j框架对代码执行引擎的支持，并通过Judge0实现了一个动态函数调用的示例。LangChain4j不仅提供了强大的工具支持，还简化了代码执行的复杂性，使得开发者能够更专注于业务逻辑的实现。通过本文的介绍，希望读者能够更好地理解和应用LangChain4j，提升开发效率和代码质量。
-
