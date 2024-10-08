@@ -61,15 +61,15 @@ public FunctionAssistant functionAssistant(ChatLanguageModel chatLanguageModel) 
 ```
 
 ## 注解注入函数
+
 通过使用注解 `@Tool`，可以更方便地集成函数调用。LangChain4j 的 AI 服务会自动处理工具执行，无需手动管理工具请求。
 
-+ **工具定义**：只需将Java方法标注为 `@Tool`，LangChain4j 就会自动将其转换为 `ToolSpecification`，并且在与LLM交互时调用这些方法。
+**工具定义**：只需将Java方法标注为 `@Tool`，LangChain4j 就会自动将其转换为 `ToolSpecification`，并且在与LLM交互时调用这些方法。
 
 ```java
 @Slf4j
 public class InvoiceHandler {
-
-    @Tool("根据用户提交的开票信息")
+    @Tool("根据用户提交的开票信息进行开票")
     public String handle(String companyName, String dutyNumber,@P("金额保留两位有效数字") String amount) {
         log.info("companyName =>>>> {} dutyNumber =>>>> {} amount =>>>> {}", companyName, dutyNumber, amount);
         return "开票成功";
@@ -78,18 +78,20 @@ public class InvoiceHandler {
 ```
 
 ```java
-    @Bean
-    public FunctionAssistant functionAssistant(ChatLanguageModel chatLanguageModel) {
-        return AiServices.builder(FunctionAssistant.class)
-                .chatLanguageModel(chatLanguageModel)
-                .tools(new InvoiceHandler())
-                .build();
-    }
+@Bean
+public FunctionAssistant functionAssistant(ChatLanguageModel chatLanguageModel) {
+    return AiServices.builder(FunctionAssistant.class)
+            .chatLanguageModel(chatLanguageModel)
+            .tools(new InvoiceHandler())
+            .build();
+}
 ```
 
 ## 动态工具配置
+
 LangChain4j 支持动态工具配置，开发者可以基于用户输入的上下文，在运行时动态加载工具。通过 `ToolProvider` 接口，工具集会在每次请求时动态生成。  
 例如，只有当用户提到 "booking" 时才加载相关的工具：
+
 
 ```java
 ToolProvider toolProvider = (toolProviderRequest) -> {
