@@ -5,6 +5,11 @@ title: RAG 增强搜索
 [SearchApi](https://www.searchapi.io/) 是一个实时搜索引擎结果页面（SERP）API。你可以使用它进行 Google、Google News、Bing、Bing News、Baidu、Google Scholar 等搜索引擎的查询，获取有机搜索结果。
 
 ## 使用方法
+
+### 获取 API KEY
+
+<img src='https://minio.pigx.top/oss/202410/1728397591.png' alt='1728397591'/>
+
 ### 依赖配置
 在你的项目 `pom.xml` 中添加以下依赖：
 
@@ -12,87 +17,51 @@ title: RAG 增强搜索
 <dependency>
   <groupId>com.pig4cloud.ai</groupId>
   <artifactId>langchain4j-web-search-engine-searchapi</artifactId>
-  <version>0.35.0</version>
 </dependency>
 
 ```
 
-### 示例代码
+### 定义 Ai Service
+
 ```java
-package com.pig4cloud.ai.search;
+public interface ChatAssistant {
 
-
-/**
- * SearchApiTool 示例类
- * 使用 SearchApi 执行网络搜索并生成自然语言响应
- * 作者: lengleng
- */
-public class SearchApiTool {
-
-    // 定义一个接口，用于 AI 助理与用户的互动
-    interface Assistant {
-        @SystemMessage({
-                "你是一名网络搜索支持助理。",
-                "如果有任何尚未发生的事件，",
-                "你必须根据用户的查询创建网络搜索请求，",
-                "并使用网络搜索工具获取有机搜索结果。",
-                "请务必在最终的回答中包含来源链接。"
-        })
-        String answer(String userMessage);
-    }
-
-    // API 密钥配置
-    private static final String SEARCHAPI_API_KEY = "YOUR_SEARCHAPI_KEY";
-    private static final String OPENAI_API_KEY = "YOUR_OPENAI_KEY";
-
-    public static void main(String[] args) {
-        // 可选参数配置，例如指定语言和地区
-        Map<String, Object> optionalParameters = new HashMap<>();
-        optionalParameters.put("gl", "us");
-        optionalParameters.put("hl", "en");
-        optionalParameters.put("google_domain", "google.com");
-
-        // 初始化搜索引擎
-        SearchApiWebSearchEngine searchEngine = SearchApiWebSearchEngine.builder()
-                .apiKey(SEARCHAPI_API_KEY)
-                .engine("google")
-                .optionalParameters(optionalParameters)
-                .build();
-
-        // 初始化语言模型
-        ChatLanguageModel chatModel = OpenAiChatModel.builder()
-                .apiKey(OPENAI_API_KEY)
-                .modelName(OpenAiChatModelName.GPT_3_5_TURBO)
-                .logRequests(true)
-                .build();
-
-        // 创建搜索工具
-        WebSearchTool webTool = WebSearchTool.from(searchEngine);
-
-        // 创建 AI 助理服务，结合聊天模型和搜索工具
-        Assistant assistant = AiServices.builder(Assistant.class)
-                .chatLanguageModel(chatModel)
-                .tools(webTool)
-                .build();
-
-        // 执行搜索并获取答案
-        String answer = assistant.answer("我的家人下周要来马德里，列出适合全家参与的最佳旅游活动");
-        System.out.println(answer);
-
-        /*
-            输出示例：
-            1. **Parque del Retiro** - 适合家庭享受大自然的美丽公园。
-            2. **Prado Museum** - 著名的艺术博物馆，适合所有年龄段的人参观。
-            3. **Mercado de San Miguel** - 可以探索和品尝美味西班牙食品的市场。
-            4. **Royal Palace** - 探索马德里皇家宫殿的壮丽景色。
-            5. **Plaza Mayor** 和 **Puerta del Sol** - 历史悠久的广场，充满活力的氛围。
-            6. **Santiago Bernabeu Stadium** - 适合体育爱好者和足球迷的圣地。
-            7. **Gran Via** - 著名的购物和娱乐街道，适合观光。
-            8. **National Archaeological Museum** - 通过考古文物了解西班牙丰富的历史。
-            9. **Templo de Debod** - 位于马德里市中心的古埃及神庙。
-        */
-    }
+    @SystemMessage("""
+            	1.	搜索支持：你的职责是为用户提供基于网络搜索的支持。
+            	2.	事件验证：如果用户提到的事件尚未发生或信息不明确，你需要通过网络搜索确认或查找相关信息。
+            	3.	网络搜索请求：使用用户的查询创建网络搜索请求，并通过网络搜索工具进行实际查询。
+            	4.	引用来源：在最终回应中，必须包括搜索到的来源链接，以确保信息的准确性和可验证性。
+            """)
+    String chat(String message);
 }
+```
+
+### 注入 web search
+
+```java
+@Bean
+public ChatAssistant chatAssistant(ChatLanguageModel chatLanguageModel) {
+    SearchApiWebSearchEngine searchEngine = SearchApiWebSearchEngine.builder()
+            .apiKey("p8SZVNAweqTtoZBBTVnXttcj")// 测试使用
+            .engine("google")
+            .build();
+
+    WebSearchTool webSearchTool = WebSearchTool.from(searchEngine);
+    return AiServices.builder(ChatAssistant.class).chatLanguageModel(chatLanguageModel).tools(webSearchTool).build();
+}
+```
+
+### 测试
+
+```java
+String chat = chatAssistant.chat("20241008 上证指数是多少");
+
+System.out.println(chat);
+
+截至2024年10月8日，A股市场迎来了国庆节后的首个交易日，主要指数表现强劲。具体到上证指数，开盘时涨幅达到了10.13%，但之后的走势有所调整，最终收盘时上证指数报收于3489.78点，涨幅为4.59%。这一天，沪深两市的成交额均非常活跃，接近或超过3.5万亿元人民币。
+
+以上信息来源于多个新闻源，包括财新网、观察者网、中国新闻网、新浪财经等，您可以点击提供的链接查看更详细的信息和报道背景。请注意，这些数据和分析仅供参考，市场情况可能会随时变化。
+
 ```
 
 ### Langchain4j 支持的搜索引擎
