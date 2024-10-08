@@ -31,17 +31,20 @@ package com.pig4cloud.ai.sentiment;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.spring.AiService;
 
-@AiService
 public interface SentimentAnalyzer {
-
-    @UserMessage("Does {{it}} have positive sentiment?")
+    
+    // text=假期结束开始上班
+    @UserMessage("{{it}} 是否具有正面情感？")
     boolean isPositive(String text);
 
-    @UserMessage("Analyze sentiment of {{it}}")
+    // text=假期结束开始上班
+    @UserMessage("分析 {{it}} 的情感")
     Sentiment analyzeSentimentOf(String text);
 
     enum Sentiment {
-        POSITIVE, NEGATIVE, NEUTRAL
+        POSITIVE, // 正面情感
+        NEGATIVE, // 负面情感
+        NEUTRAL   // 中立情感
     }
 }
 
@@ -56,26 +59,30 @@ public interface SentimentAnalyzer {
 对于数字类型的处理,LangChain4j同样提供了强大的支持:
 
 
-
 ```java
-@AiService
 public interface NumberExtractor {
-
+    
+    // text=我赚了100块
     @UserMessage("Extract a number from {{it}}")
     int extractInt(String text);
 
+    // text=我赚了100块
     @UserMessage("Extract a long number from {{it}}")
     long extractLong(String text);
 
+    // text=我赚了100块
     @UserMessage("Extract a big integer from {{it}}")
     BigInteger extractBigInteger(String text);
 
+    // text=我赚了100块
     @UserMessage("Extract a float number from {{it}}")
     float extractFloat(String text);
 
+    // text=我赚了100块
     @UserMessage("Extract a double number from {{it}}")
     double extractDouble(String text);
 
+    // text=我赚了100块
     @UserMessage("Extract a big decimal from {{it}}")
     BigDecimal extractBigDecimal(String text);
 }
