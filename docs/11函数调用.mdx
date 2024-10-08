@@ -20,57 +20,71 @@ title: 函数调用
 
 <img src='https://minio.pigx.top/oss/202410/1728219237.png' alt='1728219237'/>
 
-## 低级工具API
-使用 `ChatLanguageModel` 的 `generate(List<ChatMessage>, List<ToolSpecification>)` 方法，可以在低级别上管理函数调用。
+## 编码注入函数
 
-+ **ToolSpecification**：定义工具的名称、描述、参数等元数据，确保LLM能够理解工具的用途和参数。创建 `ToolSpecification` 有两种方式：
-    1. **手动创建**：
 
 ```java
-ToolSpecification toolSpecification = ToolSpecification.builder()
-    .name("getWeather")
-    .description("Returns the weather forecast for a given city")
-    .addParameter("city", type("string"), description("The city for which the weather forecast should be returned"))
-    .addParameter("temperatureUnit", enums(TemperatureUnit.class)) 
-    .build();
+public interface FunctionAssistant {
+
+    String chat(String message);
+}
 ```
 
-    2. **使用辅助方法**：
+- 工具说明 ToolSpecification
+
+- 业务逻辑 ToolExecutor
 
 ```java
-ToolSpecifications.toolSpecificationsFrom(WeatherTools.class);
+@Bean
+public FunctionAssistant functionAssistant(ChatLanguageModel chatLanguageModel) {
+    // 工具说明 ToolSpecification
+    ToolSpecification toolSpecification = ToolSpecification.builder()
+            .name("invoice_assistant")
+            .description("根据用户提交的开票信息，开具发票")
+            .addParameter("companyName", type("string"), description("公司名称"))
+            .addParameter("dutyNumber", type("string"), description("税号"))
+            .addParameter("amount", type("number"), description("金额"))
+            .build();
+
+    // 业务逻辑 ToolExecutor
+    ToolExecutor toolExecutor = (toolExecutionRequest, memoryId) -> {
+        String arguments1 = toolExecutionRequest.arguments();
+        System.out.println("arguments1 =>>>> " + arguments1);
+        return "开具成功";
+    };
+
+    return AiServices.builder(FunctionAssistant.class)
+            .chatLanguageModel(chatLanguageModel)
+            .tools(Map.of(toolSpecification, toolExecutor))
+            .build();
+}
 ```
 
-+ **函数调用流程**：
-
-  示例：
-
-```java
-UserMessage userMessage = UserMessage.from("What will the weather be like in London tomorrow?");
-Response<AiMessage> response = model.generate(List.of(userMessage), toolSpecifications);
-```
-
-    1. 模型生成回答，并且有可能返回 `toolExecutionRequests`，其中包含待执行的工具名称和参数。
-    2. 开发者根据这个请求手动执行工具，并返回结果。
-    3. LLM根据工具返回的结果生成最终的回答。
-
-## 高级工具API
+## 注解注入函数
 通过使用注解 `@Tool`，可以更方便地集成函数调用。LangChain4j 的 AI 服务会自动处理工具执行，无需手动管理工具请求。
 
 + **工具定义**：只需将Java方法标注为 `@Tool`，LangChain4j 就会自动将其转换为 `ToolSpecification`，并且在与LLM交互时调用这些方法。
 
 ```java
-@Tool("Returns the weather forecast for a given city")
-public String getWeather(String city, TemperatureUnit temperatureUnit) {
-    ...
+@Slf4j
+public class InvoiceHandler {
+
+    @Tool("根据用户提交的开票信息")
+    public String handle(String companyName, String dutyNumber,@P("金额保留两位有效数字") String amount) {
+        log.info("companyName =>>>> {} dutyNumber =>>>> {} amount =>>>> {}", companyName, dutyNumber, amount);
+        return "开票成功";
+    }
 }
 ```
 
-+ **自动函数调用**：当LLM决定调用工具时，AI服务会自动执行相应方法，返回值将直接发送给LLM。对于复杂场景，可以使用 `@P` 注解描述参数、使用 `@ToolMemoryId` 处理多用户、多会话等场景。
-+ **工具执行结果**：工具的执行可以通过 `Result` 包装类来获取，例如：
-
 ```java
-Result<String> result = assistant.chat("Cancel my booking 123-456");
+    @Bean
+    public FunctionAssistant functionAssistant(ChatLanguageModel chatLanguageModel) {
+        return AiServices.builder(FunctionAssistant.class)
+                .chatLanguageModel(chatLanguageModel)
+                .tools(new InvoiceHandler())
+                .build();
+    }
 ```
 
 ## 动态工具配置
@@ -93,6 +107,8 @@ ToolProvider toolProvider = (toolProviderRequest) -> {
     }
 };
 ```
+
+
 
 ### 小结
 
