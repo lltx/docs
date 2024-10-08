@@ -4,167 +4,31 @@ title: 文本向量化分类
 
 > 智慧HR: 基于LangChain4j文本向量的面试者性格特征匹配
 
-## 引言
-
-在现代人力资源管理中，快速准确地评估候选人的性格特征对于找到最佳人才至关重要。本文将展示如何利用LangChain4j框架结合大语言模型，构建一个智能的面试者性格特征匹配系统。我们将从概念入手，详细介绍如何在Java中实现这一功能。
-
-## 什么是性格特征匹配
-
 性格特征匹配是HR领域的一项重要任务，它通过分析面试者的语言表达、行为模式等信息，将其与预定义的性格标签进行匹配。这有助于HR专业人士更好地评估候选人是否适合特定职位或团队文化。
 
 ## LangChain4j中的文本分类支持
 
-LangChain4j框架通过`TextClassifier`接口，结合嵌入模型，为我们提供了实现性格特征匹配的强大工具。
+LangChain4j框架通过`TextClassifier`接口，结合向量模型，为我们提供了实现性格特征匹配的强大工具。
 
-### TextClassifier接口
+### 基于向量模型的分类器实现
+
+`EmbeddingModelTextClassifier`通过向量模型对文本进行向量化，并利用余弦相似度计算文本与性格标签之间的匹配度。
+
+
+### 配置 EmbeddingModel
 
 ```java
-public interface TextClassifier<E extends Enum<E>> {
-
-    /**
-     * 对文本进行分类
-     *
-     * @param text 需要分类的文本
-     * @return 文本所属的分类列表
-     */
-    List<E> classify(String text);
-
-    /**
-     * 对文本片段进行分类
-     *
-     * @param textSegment 需要分类的文本片段
-     * @return 文本所属的分类列表
-     */
-    default List<E> classify(TextSegment textSegment) {
-        return classify(textSegment.text());
-    }
-
-    /**
-     * 对文档进行分类
-     *
-     * @param document 要分类的文档
-     * @return 文本所属的分类列表
-     */
-    default List<E> classify(Document document) {
-        return classify(document.text());
-    }
+@Bean
+public EmbeddingModel embeddingModel() {
+    return OpenAiEmbeddingModel.builder()
+            .apiKey(System.getenv("DASHSCOPE_KEY"))
+            .modelName("text-embedding-v3")
+            .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
+            .build();
 }
 ```
 
-### 基于嵌入模型的分类器实现
-
-`EmbeddingModelTextClassifier`通过嵌入模型对文本进行向量化，并利用余弦相似度计算文本与性格标签之间的匹配度。
-
-```java
-public class EmbeddingModelTextClassifier<E extends Enum<E>> implements TextClassifier<E> {
-
-    private final EmbeddingModel embeddingModel;
-    private final Map<E, List<Embedding>> exampleEmbeddingsByLabel;
-    private final int maxResults;
-    private final double minScore;
-    private final double meanToMaxScoreRatio;
-
-    public EmbeddingModelTextClassifier(EmbeddingModel embeddingModel,
-                                        Map<E, List<String>> examplesByLabel) {
-        this(embeddingModel, examplesByLabel, 3, 0.7, 0.5);
-    }
-
-    public EmbeddingModelTextClassifier(EmbeddingModel embeddingModel,
-                                        Map<E, List<String>> examplesByLabel,
-                                        int maxResults,
-                                        double minScore,
-                                        double meanToMaxScoreRatio) {
-        this.embeddingModel = embeddingModel;
-        this.exampleEmbeddingsByLabel = embedExamples(examplesByLabel);
-        this.maxResults = maxResults;
-        this.minScore = minScore;
-        this.meanToMaxScoreRatio = meanToMaxScoreRatio;
-    }
-
-    private Map<E, List<Embedding>> embedExamples(Map<E, List<String>> examplesByLabel) {
-        return examplesByLabel.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().stream()
-                                .map(example -> embeddingModel.embed(example).content())
-                                .collect(Collectors.toList())
-                ));
-    }
-
-    @Override
-    public List<E> classify(String text) {
-        Response<Embedding> response = embeddingModel.embed(text);
-        Embedding textEmbedding = response.content();
-        List<LabelWithScore<E>> labelsWithScores = new ArrayList<>();
-
-        exampleEmbeddingsByLabel.forEach((label, exampleEmbeddings) -> {
-            double meanScore = 0;
-            double maxScore = 0;
-            for (Embedding exampleEmbedding : exampleEmbeddings) {
-                double cosineSimilarity = CosineSimilarity.between(textEmbedding, exampleEmbedding);
-                double score = RelevanceScore.fromCosineSimilarity(cosineSimilarity);
-                meanScore += score;
-                maxScore = Math.max(score, maxScore);
-            }
-            meanScore /= exampleEmbeddings.size();
-            labelsWithScores.add(new LabelWithScore<>(label, aggregatedScore(meanScore, maxScore)));
-        });
-
-        return labelsWithScores.stream()
-                .filter(it -> it.score >= minScore)
-                .sorted((a, b) -> Double.compare(b.score, a.score))
-                .limit(maxResults)
-                .map(it -> it.label)
-                .collect(Collectors.toList());
-    }
-
-    private double aggregatedScore(double meanScore, double maxScore) {
-        return (meanToMaxScoreRatio * meanScore) + ((1 - meanToMaxScoreRatio) * maxScore);
-    }
-
-    private static class LabelWithScore<E> {
-        E label;
-        double score;
-
-        LabelWithScore(E label, double score) {
-            this.label = label;
-            this.score = score;
-        }
-    }
-}
-```
-
-## 实现性格特征匹配
-
-### 依赖配置
-
-在项目的`pom.xml`中加入必要的依赖：
-
-```xml
-<dependency>
-    <groupId>dev.langchain4j</groupId>
-    <artifactId>langchain4j</artifactId>
-</dependency>
-
-<dependency>
-    <groupId>dev.langchain4j</groupId>
-    <artifactId>langchain4j-open-ai</artifactId>
-</dependency>
-```
-
-### 配置文件 `application.yml`
-
-配置OpenAI的嵌入模型：
-
-```yaml
-langchain4j:
-  openai:
-    embedding-model:
-      api-key: "your-openai-api-key"
-      model-name: "text-embedding-ada-002"
-```
-
-### 枚举类定义
+### 定义业务枚举
 
 ```java
 @Getter
@@ -202,18 +66,18 @@ public enum PersonalityTrait {
 }
 ```
 
-### 示例数据
-
-以下是中文的示例数据，用于模拟性格特征的文本向量化匹配：
+### 配置向量文本分类器
 
 ```java
-package com.smarthr.personality.example;
+@Bean
+public EmbeddingModelTextClassifier<PersonalityTrait> textClassifier(EmbeddingModel embeddingModel) {
+    return new EmbeddingModelTextClassifier<>(embeddingModel, PersonalityTraitExamples.examples);
+}
+```
 
-import com.smarthr.personality.enums.PersonalityTrait;
+### 示例数据
 
-import java.util.List;
-import java.util.Map;
-
+```java
 public class PersonalityTraitExamples {
     public static final Map<PersonalityTrait, List<String>> examples = Map.of(
             PersonalityTrait.EXTROVERT, List.of(
@@ -256,62 +120,152 @@ public class PersonalityTraitExamples {
 }
 ```
 
-### Ai Service实现
-
-```java
-@Service
-@RequiredArgsConstructor
-public class PersonalityMatchingService {
-
-    private final OpenAiEmbeddingModel openAiEmbeddingModel;
-
-    /**
-     * 分析面试者的性格特征
-     *
-     * @param interviewText 面试文本
-     * @return 匹配的性格特征列表
-     */
-    public List<PersonalityTrait> analyzePersonality(String interviewText) {
-        EmbeddingModelTextClassifier<PersonalityTrait> classifier =
-                new EmbeddingModelTextClassifier<>(openAiEmbeddingModel, PersonalityTraitExamples.examples);
-        return classifier.classify(interviewText);
-    }
-}
-```
-
-### Controller实现
-
-```java
-@RestController
-@RequestMapping("/api/hr")
-@RequiredArgsConstructor
-public class PersonalityMatchingController {
-
-    private final PersonalityMatchingService personalityMatchingService;
-
-    /**
-     * 分析面试文本并返回匹配的性格特征
-     *
-     * @param interviewText 面试文本
-     * @return 匹配的性格特征列表
-     */
-    @PostMapping("/analyze-personality")
-    public List<PersonalityTrait> analyzePersonality(@RequestBody String interviewText) {
-        return personalityMatchingService.analyzePersonality(interviewText);
-    }
-}
-```
-
 ### 测试
 
-通过HTTP请求测试性格特征匹配功能:
+```java
+@Autowired
+private EmbeddingModelTextClassifier<PersonalityTrait> textClassifier;
 
-```plain
-POST /api/hr/analyze-personality HTTP/1.1
-Host: localhost:8080
-Content-Type: application/json
-
-"我喜欢解决复杂问题并分析数据以找到创新的解决方案。虽然我能在团队中很好地工作，但我通常更喜欢独自花时间专注于任务。我总是寻找新的创意方法来应对工作中的挑战。"
+@Test
+void analyzePersonality() {
+    List<PersonalityTrait> classify = textClassifier.classify("赠人玫瑰，手有余香");
+    System.out.println(classify);
+}
 ```
 
-这样可以有效测试性格特征匹配的准确性，帮助HR更好地评估面试者的性格类型和岗位适配度。
+
+## 源码解析
+
+```java
+/**
+ * 基于嵌入模型的文本分类器
+ * 这个分类器使用嵌入模型来对文本进行分类,通过比较待分类文本的嵌入与每个标签的示例文本嵌入的相似度来实现分类。
+ *
+ * @param <E> 标签的枚举类型
+ */
+public class EmbeddingModelTextClassifier<E extends Enum<E>> implements TextClassifier<E> {
+
+    // 用于生成文本嵌入的嵌入模型
+    private final EmbeddingModel embeddingModel;
+    
+    // 存储每个标签对应的示例文本嵌入
+    private final Map<E, List<Embedding>> exampleEmbeddingsByLabel;
+    
+    // 分类结果返回的最大标签数量
+    private final int maxResults;
+    
+    // 分类时的最小相似度得分阈值
+    private final double minScore;
+    
+    // 平均得分和最大得分的权重比例
+    private final double meanToMaxScoreRatio;
+
+    /**
+     * 使用默认参数创建分类器
+     * maxResults默认为1, minScore默认为0, meanToMaxScoreRatio默认为0.5
+     *
+     * @param embeddingModel  用于嵌入示例和待分类文本的嵌入模型
+     * @param examplesByLabel 每个标签对应的示例文本集合,示例越多效果越好
+     */
+    public EmbeddingModelTextClassifier(EmbeddingModel embeddingModel,
+                                        Map<E, ? extends Collection<String>> examplesByLabel) {
+        this(embeddingModel, examplesByLabel, 1, 0, 0.5);
+    }
+
+    /**
+     * 创建分类器的完整构造函数
+     *
+     * @param embeddingModel      用于嵌入示例和待分类文本的嵌入模型
+     * @param examplesByLabel     每个标签对应的示例文本集合
+     * @param maxResults          每次分类返回的最大标签数量
+     * @param minScore            分类的最小相似度得分阈值,范围[0..1]
+     * @param meanToMaxScoreRatio 平均得分和最大得分的权重比例,范围[0..1]
+     *                            0表示仅使用平均得分,1表示仅使用最大得分,0.5表示平均和最大得分equally加权
+     */
+    public EmbeddingModelTextClassifier(EmbeddingModel embeddingModel,
+                                        Map<E, ? extends Collection<String>> examplesByLabel,
+                                        int maxResults,
+                                        double minScore,
+                                        double meanToMaxScoreRatio) {
+        // 参数校验
+        this.embeddingModel = ensureNotNull(embeddingModel, "embeddingModel");
+        ensureNotNull(examplesByLabel, "examplesByLabel");
+
+        // 预计算并存储所有示例文本的嵌入
+        this.exampleEmbeddingsByLabel = new HashMap<>();
+        examplesByLabel.forEach((label, examples) ->
+                exampleEmbeddingsByLabel.put(label, embeddingModel.embedAll(
+                    examples.stream()
+                        .map(TextSegment::from)
+                        .collect(toList())).content()
+                )
+        );
+
+        // 设置其他参数
+        this.maxResults = ensureGreaterThanZero(maxResults, "maxResults");
+        this.minScore = ensureBetween(minScore, 0.0, 1.0, "minScore");
+        this.meanToMaxScoreRatio = ensureBetween(meanToMaxScoreRatio, 0.0, 1.0, "meanToMaxScoreRatio");
+    }
+
+    /**
+     * 对给定文本进行分类
+     *
+     * @param text 待分类的文本
+     * @return 分类结果,即最相似的标签列表
+     */
+    @Override
+    public List<E> classify(String text) {
+        // 获取待分类文本的嵌入
+        Embedding textEmbedding = embeddingModel.embed(text).content();
+
+        List<LabelWithScore> labelsWithScores = new ArrayList<>();
+        
+        // 计算待分类文本与每个标签的示例文本的相似度
+        exampleEmbeddingsByLabel.forEach((label, exampleEmbeddings) -> {
+            double meanScore = 0;
+            double maxScore = 0;
+            
+            // 计算与每个示例的相似度
+            for (Embedding exampleEmbedding : exampleEmbeddings) {
+                double cosineSimilarity = CosineSimilarity.between(textEmbedding, exampleEmbedding);
+                double score = RelevanceScore.fromCosineSimilarity(cosineSimilarity);
+                meanScore += score;
+                maxScore = Math.max(score, maxScore);
+            }
+            meanScore /= exampleEmbeddings.size();
+
+            // 计算该标签的综合得分
+            labelsWithScores.add(new LabelWithScore(label, aggregatedScore(meanScore, maxScore)));
+        });
+
+        // 根据得分筛选并排序标签
+        return labelsWithScores.stream()
+                .filter(it -> it.score >= minScore)
+                // 按得分降序排序
+                .sorted(comparingDouble(labelWithScore -> 1 - labelWithScore.score))
+                .limit(maxResults)
+                .map(it -> it.label)
+                .collect(toList());
+    }
+
+    /**
+     * 计算平均得分和最大得分的加权综合得分
+     */
+    private double aggregatedScore(double meanScore, double maxScore) {
+        return (meanToMaxScoreRatio * meanScore) + ((1 - meanToMaxScoreRatio) * maxScore);
+    }
+
+    /**
+     * 内部类,用于存储标签及其对应的得分
+     */
+    private class LabelWithScore {
+        private final E label;
+        private final double score;
+
+        private LabelWithScore(E label, double score) {
+            this.label = label;
+            this.score = score;
+        }
+    }
+}
+```
