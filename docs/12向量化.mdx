@@ -2,201 +2,157 @@
 title: 向量化及存储
 ---
 
-## Embedding模型是什么 
+## Embedding模型简介
 
-Embedding模型的核心目标是将文本数据（如词汇、短语或句子）转换为数值向量（向量嵌入），使文本能在机器学习模型中进行处理。这些向量不仅捕捉了文本的语义信息，还可以用于各种自然语言处理（NLP）任务。
+Embedding模型是将文本数据（如词汇、短语或句子）转换为数值向量的工具，这些向量捕捉了文本的语义信息，可用于各种自然语言处理（NLP）任务。
 
-具体一点，Embedding 就像是把每个单词放在一个“坐标系”里，比如一个三维空间（当然实际的维度可能是几百甚至上千）。在这个坐标系中，意思相近的单词会被放得很近，而意思不同的单词则会离得比较远。比如“猫”和“狗”可能会靠得比较近，因为它们都是动物，而“猫”和“汽车”则会比较远，因为它们的意思完全不同。
+### 工作原理
+Embedding模型将文本映射到高维空间中的点，使语义相似的文本在这个空间中距离较近。例如，"猫"和"狗"的向量可能会比"猫"和"汽车"的向量更接近。
 
-**优点**：
-- Embedding模型能够捕捉词汇之间的复杂关系，如语义相似性、同义词、多义词等，超越了传统的词袋模型（Bag of Words）的简单计数方式。
-- 动态嵌入模型（如BERT）可以根据上下文生成不同的词向量，提升了对上下文理解的准确性。
+### 优点
+- 捕捉复杂的词汇关系（如语义相似性、同义词、多义词）
+- 超越传统词袋模型的简单计数方式
+- 动态嵌入模型（如BERT）可根据上下文生成不同的词向量
 
+![Embedding示意图](https://minio.pigx.top/oss/202410/1728219277.jpg)
 
-<img src='https://minio.pigx.top/oss/202410/1728219277.jpg' alt='1728219277'/>
+## LangChain支持的向量数据库
 
-
-## langchain 支持的向量数据库列表
+LangChain支持多种向量数据库，每种数据库具有不同的特性。以下是部分支持的向量数据库及其功能：
 
 | 向量存储 | 存储元数据 | 按元数据过滤 | 移除向量 |
-| --- | --- | --- | --- |
+|---------|-----------|-------------|---------|
 | 内存存储 | ✅ | ✅ | ✅ |
-| Astra DB | ✅ |  |  |
-| Azure AI Search | ✅ | ✅ | ✅ |
-| Azure CosmosDB Mongo vCore | ✅ |  |  |
-| Azure CosmosDB NoSQL | ✅ |  |  |
-| Cassandra | ✅ |  |  |
 | Chroma | ✅ | ✅ | ✅ |
-| Couchbase | ✅ | ✅ |  |
-| Elasticsearch | ✅ | ✅ | ✅ |
-| Infinispan | ✅ |  |  |
 | Milvus | ✅ | ✅ | ✅ |
-| MongoDB Atlas | ✅ | 仅支持原生过滤 |  |
-| Neo4j | ✅ |  |  |
-| OpenSearch | ✅ |  |  |
-| Oracle | ✅ | ✅ | ✅ |
-| PGVector | ✅ | ✅ | ✅ |
 | Pinecone | ✅ | ✅ | ✅ |
 | Qdrant | ✅ | ✅ |  |
-| Redis | ✅ |  |  |
-| Tablestore | ✅ | ✅ | ✅ |
-| Vearch | ✅ |  |  |
-| Vespa |  |  |  |
 | Weaviate | ✅ | ✅ |  |
-
 
 ## 文本向量化
 
+使用OpenAI的Embedding模型进行文本向量化的示例代码：
 
 ```java
 @Bean
 public EmbeddingModel embeddingModel() {
-return OpenAiEmbeddingModel.builder()
-        .apiKey(System.getenv("DASHSCOPE_KEY"))
-        .modelName("text-embedding-v3")  // 嵌入模型的名称
-        .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
-        .build();
+    return OpenAiEmbeddingModel.builder()
+            .apiKey(System.getenv("DASHSCOPE_KEY"))
+            .modelName("text-embedding-v3")
+            .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
+            .build();
 }
 
 Embedding queryEmbedding = embeddingModel.embed("host报错请检查环境").content();
 ```
 
+## Qdrant向量库存储
 
-## Qdrant 向量库存储
+Qdrant是一个高性能的向量数据库，用于存储嵌入并进行快速的向量搜索。
 
-本教程将涵盖如何安装Qdrant、如何使用LangChain4j与Qdrant进行向量查询和过滤查询，并演示相关代码。
+### 安装Qdrant
 
-#### 1. Docker安装Qdrant
-
-首先，确保已经安装了Qdrant。Qdrant是一款高性能的向量数据库，用于存储嵌入并进行快速的向量搜索。以下是在本地机器上安装Qdrant的步骤：
-
-Qdrant推荐使用Docker进行安装，这样可以避免复杂的环境配置：
+使用Docker安装Qdrant：
 
 ```bash
-docker pull qdrant/qdrant
 docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```
 
-Qdrant默认使用两个端口：
+- 端口6333：用于HTTP API
+- 端口6334：用于gRPC API
 
-+ **6333**：用于HTTP API
-+ **6334**：用于gRPC API
+![Qdrant运行截图](https://minio.pigx.top/oss/202410/1728373244.png)
 
-<img src='https://minio.pigx.top/oss/202410/1728373244.png' alt='1728373244'/>
+### 集成LangChain4j与Qdrant
 
-
-#### 2. 集成LangChain4j与Qdrant
-
-下面是如何使用LangChain4j与Qdrant进行向量搜索的详细说明。
-
-##### 2.1 引入依赖
+1. 添加Maven依赖：
 
 ```xml
 <dependency>
-        <groupId>dev.langchain4j</groupId>
-        <artifactId>langchain4j-qdrant</artifactId>
+   <groupId>dev.langchain4j</groupId>
+   <artifactId>langchain4j-qdrant</artifactId>
 </dependency>
 ```
 
-##### 2.0 创建索引
-
-- 创建客户端
+2. 创建Qdrant客户端：
 
 ```java
 @Bean
 public QdrantClient qdrantClient() {
-QdrantGrpcClient.Builder grpcClientBuilder = QdrantGrpcClient.newBuilder("127.0.0.1", 6334, false);
-return new QdrantClient(grpcClientBuilder.build());
+    QdrantGrpcClient.Builder grpcClientBuilder = QdrantGrpcClient.newBuilder("127.0.0.1", 6334, false);
+    return new QdrantClient(grpcClientBuilder.build());
 }
 ```
 
-- 创建索引
+3. 创建索引：
 
 ```java
 var vectorParams = Collections.VectorParams.newBuilder()
         .setDistance(Collections.Distance.Cosine)
-        .setSize(1024)// 特别重要，不同的大模型向量维度不一样，请和大模型保持一致
+        .setSize(1024)
         .build();
 qdrantClient.createCollectionAsync("testv", vectorParams);
 ```
 
-##### 2.1 配置Qdrant Embedding Store
-
-首先，需要配置Qdrant的向量存储 (`EmbeddingStore`)，并指定Qdrant的主机地址和gRPC端口。以下是配置代码：
+4. 配置Qdrant Embedding Store：
 
 ```java
 @Bean
 public EmbeddingStore<TextSegment> embeddingStore() {
-return
-        QdrantEmbeddingStore.builder()
-                .host("127.0.0.1")  // Qdrant服务器地址
-                .port(6334)      // Qdrant gRPC端口
-                .collectionName("testv")  // Qdrant集合名称
-                .build();
+    return QdrantEmbeddingStore.builder()
+            .host("127.0.0.1")
+            .port(6334)
+            .collectionName("testv")
+            .build();
 }
 ```
 
-`collectionName`是Qdrant中的向量集合，用于存储和管理你的向量数据。
-
-##### 2.2 文本生成与存储
-
-在这个例子中，我们使用阿里云的嵌入模型生成文本的向量。可以通过以下代码将文本生成的向量添加到Qdrant的向量存储中：
+5. 文本生成与存储：
 
 ```java
-// 文本内容
 TextSegment segment1 = TextSegment.from("浏览器报错 404，请检测您输入的路径是否正确");
-// 文本元数据 （方便检索）
 segment1.metadata().put("author", "冷冷");
 Embedding embedding1 = embeddingModel.embed(segment1).content();
 embeddingStore.add(embedding1, segment1);
 ```
 
-##### 2.2 向量查询
-在进行查询时，可以使用一个查询嵌入作为输入进行向量搜索：
+### 向量查询与过滤
+
+1. 基本向量查询：
 
 ```java
 Embedding queryEmbedding = embeddingModel.embed("404 是哪里的问题？").content();
 EmbeddingSearchRequest embeddingSearchRequest = EmbeddingSearchRequest.builder()
         .queryEmbedding(queryEmbedding)
-        .maxResults(1)  // 返回最匹配的结果
+        .maxResults(1)
         .build();
 EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(embeddingSearchRequest);
 System.out.println(searchResult.matches().get(0).embedded().text());
 ```
 
-##### 2.4 过滤查询
-在一些场景下，你可能需要根据元数据进行过滤。例如，你可以通过元数据中的“author”字段来筛选出特定作者的内容。可以使用以下代码：
+2. 带元数据过滤的查询：
 
 ```java
 EmbeddingSearchRequest embeddingSearchRequest = EmbeddingSearchRequest.builder()
         .queryEmbedding(queryEmbedding)
-        .filter(metadataKey("author").isEqualTo("冷冷"))  // 过滤条件
+        .filter(metadataKey("author").isEqualTo("冷冷"))
         .maxResults(1)
         .build();
 ```
 
-通过`metadataKey`方法，可以指定查询的元数据字段，并进行值匹配。
-
-以下是`Filter`接口的名称、功能和使用示例的表格：
+3. 常用过滤器：
 
 | Filter名称 | 功能 | 使用示例 |
-| --- | --- | --- |
+|-----------|------|---------|
 | And | 同时满足多个条件 | `Filter.and(condition1, condition2)` |
 | Or | 满足其中任意一个条件 | `Filter.or(condition1, condition2)` |
 | Not | 不满足条件 | `Filter.not(condition)` |
 | IsEqualTo | 等于 | `new IsEqualTo("field", "value")` |
-| IsNotEqualTo | 不等于 | `new IsNotEqualTo("field", "value")` |
 | IsGreaterThan | 大于 | `new IsGreaterThan("field", value)` |
-| IsGreaterThanOrEqualTo | 大于等于 | `new IsGreaterThanOrEqualTo("field", value)` |
 | IsLessThan | 小于 | `new IsLessThan("field", value)` |
-| IsLessThanOrEqualTo | 小于等于 | `new IsLessThanOrEqualTo("field", value)` |
 | IsIn | 在列表内 | `new IsIn("field", listOfValues)` |
-| IsNotIn | 不在列表内 | `new IsNotIn("field", listOfValues)` |
 
-
-#### 3. 输出结果
-
-最后，可以通过以下代码输出搜索结果：
+4. 输出结果：
 
 ```java
 List<EmbeddingMatch<TextSegment>> relevant = searchResult.matches();
@@ -206,7 +162,6 @@ System.out.println(embeddingMatch.score());  // 输出匹配分数
 System.out.println(embeddingMatch.embedded().text());  // 输出匹配文本
 ```
 
-### 结论
+## 结论
 
-本教程展示了如何使用LangChain4j与Qdrant进行向量查询、嵌入生成以及元数据过滤查询。通过这些步骤，你可以快速搭建基于Qdrant的高效向量搜索系统。
-
+本文档详细介绍了Embedding模型的概念、LangChain支持的向量数据库、文本向量化过程，以及如何使用Qdrant向量库进行存储和查询。通过这些步骤，你可以快速搭建基于Qdrant的高效向量搜索系统，为自然语言处理任务提供强大的支持。
