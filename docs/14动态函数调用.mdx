@@ -27,7 +27,8 @@ LangChain4j目前支持两种主要的代码执行引擎：
    - 开源代码执行引擎，支持多种编程语言（C, C++, Java, Python, Ruby等）
    - 被誉为"世界上最先进的开源在线代码执行系统"
 
-#### 使用示例
+#### 执行引擎测试
+
 
 ##### 1. 添加依赖
 
@@ -38,7 +39,27 @@ LangChain4j目前支持两种主要的代码执行引擎：
 </dependency>
 ```
 
-##### 2. 配置类
+##### 2. 调用 js 版本斐波那契数列
+
+```java
+CodeExecutionEngine engine = new GraalVmJavaScriptExecutionEngine();
+
+String code = """
+        function fibonacci(n) {
+            if (n <= 1) return n;
+            return fibonacci(n - 1) + fibonacci(n - 2);
+        }
+                        
+        fibonacci(10)
+        """;
+
+String result = engine.execute(code);
+```
+
+
+#### 动态函数示例
+
+##### 1. 配置类
 
 ```java
 ChatAssistant assistant = AiServices.builder(ChatAssistant.class)
@@ -47,7 +68,7 @@ ChatAssistant assistant = AiServices.builder(ChatAssistant.class)
         .build();
 ```
 
-##### 3. AI Service 定义
+##### 2. AI Service 定义
 
 ```java
 public interface Assistant {
@@ -55,7 +76,7 @@ public interface Assistant {
 }
 ```
 
-##### 4. 测试
+##### 3. 测试
 
 ```java
 String chat = chatAssistant.chat("What is the square root of 485906798473894056 in scientific notation?");
