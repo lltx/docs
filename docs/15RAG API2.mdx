@@ -1,0 +1,200 @@
+---
+title: RAG API 高级
+---
+
+## 高级RAG
+
+更多详细信息即将发布。在此之前，请阅读[此链接](https://github.com/langchain4j/langchain4j/pull/538)。
+
+### 检索增强器
+
+`RetrievalAugmentor` 是进入RAG（检索增强生成）流程的入口。它负责通过从各种来源检索到的相关 `Content` 来增强 `ChatMessage`。
+
+在创建[AI服务](/tutorials/ai-services)时，可以指定 `RetrievalAugmentor` 的实例：
+```java
+Assistant assistant = AiServices.builder(Assistant.class)
+    ...
+    .retrievalAugmentor(retrievalAugmentor)
+    .build();
+```
+每次调用AI服务时，都会调用指定的 `RetrievalAugmentor` 来增强当前的 `UserMessage`。
+
+你可以使用默认实现的 `RetrievalAugmentor`（如下所述），也可以实现自定义的增强器。
+
+### 默认检索增强器
+
+LangChain4j 提供了 `RetrievalAugmentor` 接口的开箱即用实现：`DefaultRetrievalAugmentor`，适用于大多数RAG场景。该实现受到[这篇文章](https://blog.langchain.dev/deconstructing-rag)和[这篇论文](https://arxiv.org/abs/2312.10997)的启发。建议阅读这些资源以更好地理解该概念。
+
+### 查询
+
+`Query` 代表RAG流程中的用户查询。它包含查询的文本和查询元数据。
+
+#### 查询元数据
+
+`Query` 中的 `Metadata` 包含可能在RAG流程的不同组件中有用的信息，例如：
+- `Metadata.userMessage()` - 应该增强的原始 `UserMessage`
+- `Metadata.chatMemoryId()` - 具有 `@MemoryId` 注解的参数的值，更多信息请参考[此处](/tutorials/ai-services/#chat-memory)。此参数可用于标识用户并在检索过程中应用访问限制或过滤器。
+- `Metadata.chatMemory()` - 所有之前的 `ChatMessage`，这有助于理解提出 `Query` 的上下文。
+
+### 查询转换器
+
+`QueryTransformer` 将给定的 `Query` 转换为一个或多个 `Query`。其目标是通过修改或扩展原始 `Query` 来提高检索质量。
+
+一些已知的提升检索效果的方法包括：
+- 查询压缩
+- 查询扩展
+- 查询重写
+- 反向推理提示
+- 假设性文档嵌入（HyDE）
+
+更多详细信息请参考[这里](https://blog.langchain.dev/query-transformations/)。
+
+#### 默认查询转换器
+
+`DefaultQueryTransformer` 是 `DefaultRetrievalAugmentor` 中使用的默认实现，它不会对 `Query` 进行任何修改，只是直接传递原始内容。
+
+#### 压缩查询转换器
+
+`CompressingQueryTransformer` 使用大语言模型（LLM）压缩给定的 `Query` 和之前的对话，生成一个独立的 `Query`。当用户提问可能与之前的问题或答案相关时，此功能非常有用。
+
+例如：
+```
+用户：告诉我关于John Doe的事情。
+AI：John Doe 是一个...
+用户：他住在哪里？
+```
+查询 “他住在哪里？” 本身无法检索到所需的信息，因为它没有明确提到John Doe，导致不清楚“他”指的是谁。
+
+当使用 `CompressingQueryTransformer` 时，LLM 会读取整个对话并将“他住在哪里？” 转换为“John Doe 住在哪里？”。
+
+#### 扩展查询转换器
+
+`ExpandingQueryTransformer` 使用LLM将给定的 `Query` 扩展为多个 `Query`。这有助于通过不同方式重述和重新表述 `Query`，从而检索到更多相关内容。
+
+### 内容
+
+`Content` 代表与用户 `Query` 相关的内容。目前仅支持文本内容（即 `TextSegment`），但未来可能支持其他模态（例如图像、音频、视频等）。
+
+### 内容检索器
+
+`ContentRetriever` 使用给定的 `Query` 从底层数据源中检索 `Content`。底层数据源可以是几乎任何类型的：
+- 嵌入存储
+- 全文搜索引擎
+- 向量和全文搜索的混合
+- 网络搜索引擎
+- 知识图谱
+- SQL数据库
+- 等等。
+
+#### 嵌入存储内容检索器
+
+`EmbeddingStoreContentRetriever` 使用 `EmbeddingModel` 对 `Query` 进行嵌入，并从 `EmbeddingStore` 中检索相关内容。
+
+示例代码：
+```java
+EmbeddingStore embeddingStore = ...
+EmbeddingModel embeddingModel = ...
+
+ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
+    .embeddingStore(embeddingStore)
+    .embeddingModel(embeddingModel)
+    .maxResults(3)
+     // maxResults 也可以根据查询动态指定
+    .dynamicMaxResults(query -> 3)
+    .minScore(0.75)
+     // minScore 也可以根据查询动态指定
+    .dynamicMinScore(query -> 0.75)
+    .filter(metadataKey("userId").isEqualTo("12345"))
+    // 过滤器也可以根据查询动态指定
+    .dynamicFilter(query -> {
+        String userId = getUserId(query.metadata().chatMemoryId());
+        return metadataKey("userId").isEqualTo(userId);
+    })
+    .build();
+```
+
+#### 网络搜索内容检索器
+
+`WebSearchContentRetriever` 使用 `WebSearchEngine` 从网络中检索相关 `Content`。
+
+所有支持的 `WebSearchEngine` 集成可以在[此处](/category/web-search-engines)找到。
+
+示例代码：
+```java
+WebSearchEngine googleSearchEngine = GoogleCustomWebSearchEngine.builder()
+        .apiKey(System.getenv("GOOGLE_API_KEY"))
+        .csi(System.getenv("GOOGLE_SEARCH_ENGINE_ID"))
+        .build();
+
+ContentRetriever contentRetriever = WebSearchContentRetriever.builder()
+        .webSearchEngine(googleSearchEngine)
+        .maxResults(3)
+        .build();
+```
+完整示例可参考[这里](https://github.com/langchain4j/langchain4j-examples/blob/main/rag-examples/src/main/java/_3_advanced/_08_Advanced_RAG_Web_Search_Example.java)。
+
+#### SQL数据库内容检索器
+
+`SqlDatabaseContentRetriever` 是 `langchain4j-experimental-sql` 模块中的实验性实现。
+
+它使用 `DataSource` 和LLM来生成和执行SQL查询，以处理给定的自然语言 `Query`。
+
+更多信息请参考 `SqlDatabaseContentRetriever` 的 javadoc。
+
+示例可参考[此处](https://github.com/langchain4j/langchain4j-examples/blob/main/rag-examples/src/main/java/_3_advanced/_10_Advanced_RAG_SQL_Database_Retreiver_Example.java)。
+
+#### Azure AI搜索内容检索器
+
+`AzureAiSearchContentRetriever` 可在 `langchain4j-azure-ai-search` 模块中找到。
+
+#### Neo4j内容检索器
+
+`Neo4jContentRetriever` 可在 `langchain4j-neo4j` 模块中找到。
+
+### 查询路由器
+
+`QueryRouter` 负责将 `Query` 路由到适当的 `ContentRetriever`。
+
+#### 默认查询路由器
+
+`DefaultQueryRouter` 是 `DefaultRetrievalAugmentor` 中的默认实现，它将每个 `Query` 路由到所有配置的 `ContentRetriever`。
+
+#### 语言模型查询路由器
+
+`LanguageModelQueryRouter` 使用LLM决定将 `Query` 路由到哪里。
+
+### 内容聚合器
+
+更多详细信息即将发布。
+
+#### 默认内容聚合器
+
+`DefaultContentAggregator`
+
+更多详细信息即将发布。
+
+#### 重新排序内容聚合器
+
+`ReRankingContentAggregator`
+
+更多详细信息即将发布。
+
+### 内容注入器
+
+更多详细信息即将发布。
+
+#### 默认内容注入器
+
+`DefaultContentInjector`
+
+更多详细信息即将发布。
+
+### 并行化
+
+当只有一个 `Query` 和一个 `ContentRetriever` 时，`DefaultRetrievalAugmentor` 会在同一个线程中执行查询路由和内容检索。否则，会使用 `Executor` 来并行化处理流程。默认情况下，使用一个修改后的（`keepAliveTime` 是1秒而非60秒）`Executors.newCachedThreadPool()`，但你可以在创建 `DefaultRetrievalAugmentor` 时提供自定义的 `Executor` 实例：
+```java
+DefaultRetrievalAugmentor.builder()
+        ...
+        .executor(executor)
+        .build;
+```
