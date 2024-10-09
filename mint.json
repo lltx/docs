@@ -45,8 +45,8 @@
         "docs/12向量化",
         "docs/13向量文本分类",
         "docs/19敏感词处理",
-        "docs/15RAG解析文档",
         "docs/16EasyRag",
+        "docs/15RAG API",
         "docs/17RAG 重排",
         "docs/20rag"
       ]
