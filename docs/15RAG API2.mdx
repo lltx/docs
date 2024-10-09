@@ -11,9 +11,25 @@ title: RAG API 增强
 在创建 AI service 时，可以指定 `RetrievalAugmentor` 实例：
 
 ```java
-Assistant assistant = AiServices.builder(Assistant.class)
-    .retrievalAugmentor(retrievalAugmentor)
-    .build();
+
+@Bean
+public ChatAssistant assistant(ChatLanguageModel chatLanguageModel, EmbeddingStore<TextSegment> embeddingStore) {
+
+    DefaultRetrievalAugmentor retrievalAugmentor = DefaultRetrievalAugmentor.builder()
+            .queryTransformer()  // 查询增强
+            .contentRetriever() // 内容源 单个直接配置
+            .queryRouter(new DefaultQueryRouter())// 多个内容源，路由
+            .contentAggregator() // 匹配结果聚合
+            .contentInjector()   // 结果提示词注入
+            .executor()  // 并行化
+            .build();
+
+    return AiServices.builder(ChatAssistant.class)
+            .chatLanguageModel(chatLanguageModel)
+            .chatMemory(MessageWindowChatMemory.withMaxMessages(10))
+            .retrievalAugmentor(retrievalAugmentor)
+            .build();
+}
 ```
 
 每次调用 AI 服务时，都会自动使用这个增强器来处理当前的用户消息。你可以使用默认的增强器实现，也可以根据需求自定义。
