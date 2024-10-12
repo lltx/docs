@@ -19,10 +19,14 @@
     {
       "name": "源码",
       "url": "https://github.com/pig-mesh/langchain4j-course"
+    },
+    {
+    "name": "PIG AI",
+    "url": "https://ai.pig4cloud.com"
     }
   ],
   "topbarCtaButton": {
-    "name": "PIG AI",
+    "name": "AI微信群",
     "url": "https://ai.pig4cloud.com"
   },
   "navigation": [
