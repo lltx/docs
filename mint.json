@@ -15,11 +15,21 @@
       "to": "#07C983"
     }
   },
-  "topbarLinks": [
+  "tabs": [
     {
-      "name": "源码",
-      "url": "https://github.com/pig-mesh/langchain4j-course"
+        "name": "配套文档",
+        "url": "introduction"
     },
+    {
+        "name": "配套视频",
+        "url": "https://www.bilibili.com/video/BV1Yv21YzEP8/?spm_id_from=888.80997.embed_other.whitelist&t=9.471845&bvid=BV1Yv21YzEP8&vd_source=6987eadf3959341da330efcb8fa0742f"
+    },
+    {
+        "name": "配套源码",
+        "url": "https://github.com/pig-mesh/langchain4j-course"
+    }
+  ],
+  "topbarLinks": [
     {
     "name": "PIG AI",
     "url": "https://ai.pig4cloud.com"
