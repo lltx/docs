@@ -29,6 +29,9 @@
         "url": "https://github.com/pig-mesh/langchain4j-course"
     }
   ],
+  "primaryTab": {
+    "name": "配套文档"
+  },
   "topbarLinks": [
     {
     "name": "PIG AI",
